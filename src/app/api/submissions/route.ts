@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSubmissions, createSubmission } from "@/lib/supabase/db";
 import { getDevUser } from "@/lib/dev-auth";
+import { validateBody, submissionRules } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -20,8 +21,8 @@ export async function GET(request: NextRequest) {
         ? { templateId }
         : { userId: devUser.id, templateId };
 
-    const submissions = await getSubmissions(supabase, filters);
-    return NextResponse.json(submissions);
+    const { data: submissions, count } = await getSubmissions(supabase, filters);
+    return NextResponse.json({ data: submissions, count });
   } catch {
     return NextResponse.json(
       { error: "Failed to fetch submissions" },
@@ -40,6 +41,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    const result = validateBody(body, submissionRules);
+    if (!result.valid) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
     const submission = await createSubmission(supabase, {
       ...body,
       user_id: devUser.id,

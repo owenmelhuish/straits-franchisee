@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/client";
 
+interface CampaignData {
+  campaignStart: string;
+  campaignEnd: string;
+  budget: number;
+}
+
 interface ExportToStorageOptions {
   blob: Blob;
   userId: string;
@@ -7,6 +13,7 @@ interface ExportToStorageOptions {
   templateSlug: string;
   formatName: string;
   selections: Record<string, string>;
+  campaign?: CampaignData;
 }
 
 export async function exportToStorage({
@@ -16,6 +23,7 @@ export async function exportToStorage({
   templateSlug,
   formatName,
   selections,
+  campaign,
 }: ExportToStorageOptions): Promise<{ fileUrl: string; submissionId: string }> {
   const supabase = createClient();
   const timestamp = Date.now();
@@ -44,6 +52,9 @@ export async function exportToStorage({
       format_name: formatName,
       file_url: publicUrl,
       selections,
+      campaign_start: campaign?.campaignStart ?? null,
+      campaign_end: campaign?.campaignEnd ?? null,
+      budget: campaign?.budget ?? null,
     }),
   });
 

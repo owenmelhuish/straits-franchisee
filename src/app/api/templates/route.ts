@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getTemplates, createTemplate } from "@/lib/supabase/db";
 import { getDevUser } from "@/lib/dev-auth";
+import { validateBody, templateCreateRules } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -12,8 +13,8 @@ export async function GET(request: NextRequest) {
     | null;
 
   try {
-    const templates = await getTemplates(supabase, status ?? undefined);
-    return NextResponse.json(templates);
+    const { data: templates, count } = await getTemplates(supabase, status ?? undefined);
+    return NextResponse.json({ data: templates, count });
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch templates" },
@@ -36,6 +37,11 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    const result = validateBody(body, templateCreateRules);
+    if (!result.valid) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
     const template = await createTemplate(supabase, {
       ...body,
       created_by: devUser.id,

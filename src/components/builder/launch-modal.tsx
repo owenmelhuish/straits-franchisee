@@ -1,9 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { X, CalendarDays, DollarSign, ChevronLeft } from "lucide-react";
+import { X, CalendarDays, DollarSign, ChevronLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+
+export interface CampaignData {
+  campaignStart: string;
+  campaignEnd: string;
+  budget: number;
+}
 
 interface LaunchModalProps {
   templateName: string;
@@ -12,7 +18,8 @@ interface LaunchModalProps {
   selections: Record<string, string>;
   assetBanks: { name: string; type: string }[];
   layers: { id: string; name: string; linkedBank?: string }[];
-  onPublish: () => void;
+  isPublishing?: boolean;
+  onPublish: (campaign: CampaignData) => void;
   onClose: () => void;
 }
 
@@ -23,6 +30,7 @@ export function LaunchModal({
   selections,
   assetBanks,
   layers,
+  isPublishing = false,
   onPublish,
   onClose,
 }: LaunchModalProps) {
@@ -96,8 +104,15 @@ export function LaunchModal({
             startDate={formatDateDisplay(startDate)}
             endDate={formatDateDisplay(endDate)}
             budget={budget}
+            isPublishing={isPublishing}
             onBack={() => setStep("campaign")}
-            onPublish={onPublish}
+            onPublish={() =>
+              onPublish({
+                campaignStart: startDate,
+                campaignEnd: endDate,
+                budget,
+              })
+            }
           />
         )}
       </div>
@@ -126,6 +141,13 @@ function CampaignStep({
   onNext: () => void;
   onClose: () => void;
 }) {
+  const dateError =
+    startDate && endDate && endDate < startDate
+      ? "End date must be on or after start date"
+      : null;
+  const budgetError = budget <= 0 ? "Budget must be greater than $0" : null;
+  const hasErrors = !!dateError || !!budgetError;
+
   return (
     <div className="p-6">
       <h2 className="mb-6 text-xl font-bold">Campaign Settings</h2>
@@ -160,6 +182,9 @@ function CampaignStep({
             />
           </div>
         </div>
+        {dateError && (
+          <p className="mt-1.5 text-xs text-red-500">{dateError}</p>
+        )}
       </div>
 
       {/* Budget */}
@@ -171,7 +196,7 @@ function CampaignStep({
         <div className="mb-2 text-2xl font-bold">${budget}</div>
         <Slider
           value={budget}
-          onValueChange={(v: number | number[]) =>
+          onValueChange={(v: number | readonly number[]) =>
             onBudgetChange(typeof v === "number" ? v : v[0])
           }
           min={0}
@@ -183,6 +208,9 @@ function CampaignStep({
           <span>$0</span>
           <span>$1,000</span>
         </div>
+        {budgetError && (
+          <p className="mt-1.5 text-xs text-red-500">{budgetError}</p>
+        )}
       </div>
 
       {/* Actions */}
@@ -190,7 +218,7 @@ function CampaignStep({
         <Button variant="outline" onClick={onClose} className="w-full">
           Cancel
         </Button>
-        <Button onClick={onNext} className="w-full">
+        <Button onClick={onNext} className="w-full" disabled={hasErrors}>
           Review
         </Button>
       </div>
@@ -208,6 +236,7 @@ function ReviewStep({
   startDate,
   endDate,
   budget,
+  isPublishing,
   onBack,
   onPublish,
 }: {
@@ -223,6 +252,7 @@ function ReviewStep({
   startDate: string;
   endDate: string;
   budget: number;
+  isPublishing: boolean;
   onBack: () => void;
   onPublish: () => void;
 }) {
@@ -276,9 +306,17 @@ function ReviewStep({
         </Button>
         <Button
           onClick={onPublish}
-          className="w-full bg-[#6366f1] hover:bg-[#5558e6]"
+          className="w-full"
+          disabled={isPublishing}
         >
-          Publish
+          {isPublishing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Publishing...
+            </>
+          ) : (
+            "Publish"
+          )}
         </Button>
       </div>
     </div>

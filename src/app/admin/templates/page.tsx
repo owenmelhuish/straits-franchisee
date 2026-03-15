@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export default async function AdminTemplatesPage() {
   const supabase = await createClient();
-  const templates = await getTemplates(supabase);
+  const { data: templates } = await getTemplates(supabase);
 
   return (
     <div>

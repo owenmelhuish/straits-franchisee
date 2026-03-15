@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useCanvasScale } from "@/hooks/use-canvas-scale";
 import { useCreativeCanvas } from "@/hooks/use-creative-canvas";
@@ -10,9 +10,11 @@ import { LayerPanel } from "./layer-panel";
 import { FormatSwitcher } from "./format-switcher";
 import { ControlsPanel } from "./controls-panel";
 import { LaunchButton } from "./launch-button";
-import { LaunchModal } from "./launch-modal";
+import { LaunchModal, CampaignData } from "./launch-modal";
 import { exportToStorage } from "@/lib/canvas/export-to-storage";
+import { toast } from "sonner";
 import { TemplateConfig } from "@/types/template";
+import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes-warning";
 import { ChevronLeft } from "lucide-react";
 
 interface BuilderViewProps {
@@ -25,8 +27,26 @@ export function BuilderView({ template }: BuilderViewProps) {
   const layerSelections = useBuilderStore((s) => s.layerSelections);
   const setCanvasReady = useBuilderStore((s) => s.setCanvasReady);
   const setExporting = useBuilderStore((s) => s.setExporting);
+  const isExporting = useBuilderStore((s) => s.isExporting);
   const [userId, setUserId] = useState<string | null>(null);
   const [showLaunchModal, setShowLaunchModal] = useState(false);
+
+  // Warn before leaving with unsaved changes
+  const defaultSelections = useMemo(() => {
+    const defaults: Record<string, string> = {};
+    for (const fmt of template.formats) {
+      for (const layer of fmt.layers) {
+        if (!layer.editable || !layer.linkedBank) continue;
+        const value = layer.type === "image" ? layer.src : layer.text;
+        if (value) defaults[layer.id] = value;
+      }
+    }
+    return defaults;
+  }, [template]);
+
+  const hasUnsavedChanges =
+    JSON.stringify(layerSelections) !== JSON.stringify(defaultSelections);
+  useUnsavedChangesWarning(hasUnsavedChanges);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +77,7 @@ export function BuilderView({ template }: BuilderViewProps) {
     }
   }, []);
 
-  const handlePublish = useCallback(async () => {
+  const handlePublish = useCallback(async (campaign: CampaignData) => {
     const formatName = format?.name ?? "creative";
 
     // Download the asset
@@ -76,13 +96,24 @@ export function BuilderView({ template }: BuilderViewProps) {
             templateSlug: template.slug,
             formatName,
             selections: layerSelections,
+            campaign,
           });
         }
+        toast.success("Campaign published successfully!", {
+          description: "Your creative has been exported and saved.",
+        });
       } catch (err) {
         console.error("Failed to save to storage:", err);
+        toast.error("Failed to save campaign", {
+          description: "Your creative was downloaded but could not be saved to the server.",
+        });
       } finally {
         setExporting(false);
       }
+    } else {
+      toast.success("Creative exported!", {
+        description: "Your PNG has been downloaded.",
+      });
     }
 
     setShowLaunchModal(false);
@@ -151,6 +182,7 @@ export function BuilderView({ template }: BuilderViewProps) {
           selections={layerSelections}
           assetBanks={bankMeta}
           layers={editableLayers}
+          isPublishing={isExporting}
           onPublish={handlePublish}
           onClose={() => setShowLaunchModal(false)}
         />

@@ -7,9 +7,9 @@ export default async function HistoryPage() {
   const supabase = await createClient();
   const devUser = await getDevUser();
 
-  const submissions = devUser
+  const { data: submissions } = devUser
     ? await getSubmissions(supabase, { userId: devUser.id })
-    : [];
+    : { data: [] };
 
   return (
     <div className="mx-auto max-w-3xl">

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getTemplateBySlug, getTemplateById } from "@/lib/supabase/db";
 import { templateRowToConfig } from "@/types/database";
 import { BuilderView } from "@/components/builder/builder-view";
+import { BuilderErrorBoundary } from "@/components/builder/builder-error-boundary";
 import {
   getTemplateBySlug as getSeedBySlug,
   getTemplateById as getSeedById,
@@ -23,7 +24,11 @@ export default async function BuilderPage({ params }: PageProps) {
       (await getTemplateById(supabase, templateId).catch(() => null));
 
     if (row) {
-      return <BuilderView template={templateRowToConfig(row)} />;
+      return (
+        <BuilderErrorBoundary>
+          <BuilderView template={templateRowToConfig(row)} />
+        </BuilderErrorBoundary>
+      );
     }
   } catch {
     // Supabase not configured — fall through to seed
@@ -35,5 +40,9 @@ export default async function BuilderPage({ params }: PageProps) {
     notFound();
   }
 
-  return <BuilderView template={template} />;
+  return (
+    <BuilderErrorBoundary>
+      <BuilderView template={template} />
+    </BuilderErrorBoundary>
+  );
 }

@@ -32,9 +32,13 @@ export async function loadFormat(
       }
     }
 
-    const obj = await createFabricObject(effectiveLayer);
-    if (obj) {
-      canvas.add(obj);
+    try {
+      const obj = await createFabricObject(effectiveLayer);
+      if (obj) {
+        canvas.add(obj);
+      }
+    } catch (err) {
+      console.error(`Failed to load layer "${layer.name}" (${layer.type}):`, err);
     }
   }
 

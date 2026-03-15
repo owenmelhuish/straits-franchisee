@@ -108,6 +108,8 @@ export function useCreativeCanvas({
               canvas.remove(obj);
               canvas.insertAt(idx, newImg);
               canvas.requestRenderAll();
+            }).catch((err) => {
+              console.error(`Failed to load image for layer "${layer.name}":`, err);
             });
           }
         }

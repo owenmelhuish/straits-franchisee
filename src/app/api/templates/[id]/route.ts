@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getTemplateById, updateTemplate, deleteTemplate } from "@/lib/supabase/db";
 import { getDevUser } from "@/lib/dev-auth";
+import { validateBody, templateUpdateRules } from "@/lib/validation";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -34,6 +35,11 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
   try {
     const body = await request.json();
+    const result = validateBody(body, templateUpdateRules);
+    if (!result.valid) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
     const template = await updateTemplate(supabase, id, body);
     return NextResponse.json(template);
   } catch {

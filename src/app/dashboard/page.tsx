@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getTemplates } from "@/lib/supabase/db";
+import { TemplateRow } from "@/types/database";
 import { TemplateCard } from "@/components/dashboard/template-card";
 import { SEED_TEMPLATES } from "@/lib/seed/templates";
 import Link from "next/link";
@@ -11,11 +12,12 @@ export default async function DashboardPage() {
   const role = cookieStore.get("dev-role")?.value;
   const isAdmin = role === "admin";
 
-  let dbTemplates: Awaited<ReturnType<typeof getTemplates>> = [];
+  let dbTemplates: TemplateRow[] = [];
 
   try {
     const supabase = await createClient();
-    dbTemplates = await getTemplates(supabase, "active");
+    const result = await getTemplates(supabase, "active");
+    dbTemplates = result.data;
   } catch {
     // Supabase not configured — fall through to seed
   }

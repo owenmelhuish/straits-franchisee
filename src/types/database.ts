@@ -33,6 +33,9 @@ export interface SubmissionRow {
   format_name: string;
   file_url: string;
   selections: Record<string, string>;
+  campaign_start: string | null;
+  campaign_end: string | null;
+  budget: number | null;
   created_at: string;
 }
 

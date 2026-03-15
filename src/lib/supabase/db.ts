@@ -5,20 +5,25 @@ import { TemplateRow, SubmissionRow } from "@/types/database";
 
 export async function getTemplates(
   supabase: SupabaseClient,
-  status?: TemplateRow["status"]
+  status?: TemplateRow["status"],
+  pagination?: { limit?: number; offset?: number }
 ) {
   let query = supabase
     .from("templates")
-    .select("*")
+    .select("*", { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (status) {
     query = query.eq("status", status);
   }
 
-  const { data, error } = await query;
+  const limit = pagination?.limit ?? 50;
+  const offset = pagination?.offset ?? 0;
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data as TemplateRow[];
+  return { data: data as TemplateRow[], count: count ?? 0 };
 }
 
 export async function getTemplateById(
@@ -91,11 +96,16 @@ export async function deleteTemplate(
 
 export async function getSubmissions(
   supabase: SupabaseClient,
-  filters?: { userId?: string; templateId?: string }
+  filters?: {
+    userId?: string;
+    templateId?: string;
+    limit?: number;
+    offset?: number;
+  }
 ) {
   let query = supabase
     .from("submissions")
-    .select("*, templates(name, slug)")
+    .select("*, templates(name, slug)", { count: "exact" })
     .order("created_at", { ascending: false });
 
   if (filters?.userId) {
@@ -105,9 +115,30 @@ export async function getSubmissions(
     query = query.eq("template_id", filters.templateId);
   }
 
-  const { data, error } = await query;
+  const limit = filters?.limit ?? 50;
+  const offset = filters?.offset ?? 0;
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data as (SubmissionRow & { templates: { name: string; slug: string } | null })[];
+  return {
+    data: data as (SubmissionRow & { templates: { name: string; slug: string } | null })[],
+    count: count ?? 0,
+  };
+}
+
+export async function getSubmissionById(
+  supabase: SupabaseClient,
+  id: string
+) {
+  const { data, error } = await supabase
+    .from("submissions")
+    .select("*, templates(name, slug)")
+    .eq("id", id)
+    .single();
+
+  if (error) throw error;
+  return data as SubmissionRow & { templates: { name: string; slug: string } | null };
 }
 
 export async function createSubmission(

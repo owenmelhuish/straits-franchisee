@@ -4,7 +4,7 @@ import { SubmissionRow } from "@/components/dashboard/submission-row";
 
 export default async function AdminSubmissionsPage() {
   const supabase = await createClient();
-  const submissions = await getSubmissions(supabase);
+  const { data: submissions } = await getSubmissions(supabase);
 
   return (
     <div>
