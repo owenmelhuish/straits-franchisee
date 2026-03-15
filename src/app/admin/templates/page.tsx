@@ -10,42 +10,40 @@ export default async function AdminTemplatesPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">Templates</h1>
-        <Link href="/admin/templates/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Upload PSD
-          </Button>
-        </Link>
       </div>
 
-      {templates.length === 0 ? (
-        <div className="rounded-xl border bg-white p-12 text-center">
-          <p className="text-muted-foreground">No templates yet.</p>
-          <Link href="/admin/templates/new" className="mt-2 inline-block text-sm text-primary hover:underline">
-            Upload your first PSD
+      <div className="space-y-2">
+        {/* Create New card */}
+        <Link
+          href="/admin/templates/new"
+          className="flex items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/25 bg-white px-5 py-6 text-muted-foreground hover:border-primary hover:text-primary hover:shadow-sm"
+        >
+          <Plus className="h-5 w-5" />
+          <div>
+            <p className="font-medium">Create New Template</p>
+            <p className="text-sm">Upload a PSD file to get started</p>
+          </div>
+        </Link>
+
+        {/* Existing templates */}
+        {templates.map((t) => (
+          <Link
+            key={t.id}
+            href={`/admin/templates/${t.id}/edit`}
+            className="flex items-center justify-between rounded-lg border bg-white px-5 py-4 hover:shadow-sm"
+          >
+            <div>
+              <p className="font-medium">{t.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {t.slug} &middot; {(t.config as { formats?: unknown[] })?.formats?.length ?? 0} formats
+              </p>
+            </div>
+            <StatusBadge status={t.status} />
           </Link>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {templates.map((t) => (
-            <Link
-              key={t.id}
-              href={`/admin/templates/${t.id}/edit`}
-              className="flex items-center justify-between rounded-lg border bg-white px-5 py-4 hover:shadow-sm"
-            >
-              <div>
-                <p className="font-medium">{t.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t.slug} &middot; {(t.config as { formats?: unknown[] })?.formats?.length ?? 0} formats
-                </p>
-              </div>
-              <StatusBadge status={t.status} />
-            </Link>
-          ))}
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }

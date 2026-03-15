@@ -9,10 +9,9 @@ import { BuilderLayout } from "@/components/layout/builder-layout";
 import { LayerPanel } from "./layer-panel";
 import { FormatSwitcher } from "./format-switcher";
 import { ControlsPanel } from "./controls-panel";
-import { ExportButton } from "./export-button";
-import { ExportSuccessModal } from "./export-success-modal";
+import { LaunchButton } from "./launch-button";
+import { LaunchModal } from "./launch-modal";
 import { exportToStorage } from "@/lib/canvas/export-to-storage";
-import { createClient } from "@/lib/supabase/client";
 import { TemplateConfig } from "@/types/template";
 import { ChevronLeft } from "lucide-react";
 
@@ -26,9 +25,8 @@ export function BuilderView({ template }: BuilderViewProps) {
   const layerSelections = useBuilderStore((s) => s.layerSelections);
   const setCanvasReady = useBuilderStore((s) => s.setCanvasReady);
   const setExporting = useBuilderStore((s) => s.setExporting);
-  const lastSubmission = useBuilderStore((s) => s.lastSubmission);
-  const setLastSubmission = useBuilderStore((s) => s.setLastSubmission);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showLaunchModal, setShowLaunchModal] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -51,18 +49,18 @@ export function BuilderView({ template }: BuilderViewProps) {
     setTemplate(template);
   }, [template, setTemplate]);
 
-  // Get current user
+  // Get dev user ID from cookie
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUserId(user?.id ?? null);
-    });
+    const match = document.cookie.match(/(?:^|; )dev-role=([^;]*)/);
+    if (match) {
+      setUserId("00000000-0000-0000-0000-000000000000");
+    }
   }, []);
 
-  const handleExport = useCallback(async () => {
+  const handlePublish = useCallback(async () => {
     const formatName = format?.name ?? "creative";
 
-    // Local download
+    // Download the asset
     exportPng(`${template.slug}-${formatName}.png`);
 
     // Upload to storage if authenticated
@@ -71,7 +69,7 @@ export function BuilderView({ template }: BuilderViewProps) {
         setExporting(true);
         const blob = await getBlob();
         if (blob) {
-          const result = await exportToStorage({
+          await exportToStorage({
             blob,
             userId,
             templateId: template.id,
@@ -79,7 +77,6 @@ export function BuilderView({ template }: BuilderViewProps) {
             formatName,
             selections: layerSelections,
           });
-          setLastSubmission(result);
         }
       } catch (err) {
         console.error("Failed to save to storage:", err);
@@ -87,7 +84,19 @@ export function BuilderView({ template }: BuilderViewProps) {
         setExporting(false);
       }
     }
-  }, [exportPng, getBlob, format, template, userId, layerSelections, setExporting, setLastSubmission]);
+
+    setShowLaunchModal(false);
+  }, [exportPng, getBlob, format, template, userId, layerSelections, setExporting]);
+
+  // Build props for the review modal
+  const editableLayers = (format?.layers ?? [])
+    .filter((l) => l.editable && l.linkedBank)
+    .map((l) => ({ id: l.id, name: l.name, linkedBank: l.linkedBank }));
+
+  const bankMeta = (template.assetBanks ?? []).map((b) => ({
+    name: b.name,
+    type: b.type,
+  }));
 
   return (
     <>
@@ -128,16 +137,22 @@ export function BuilderView({ template }: BuilderViewProps) {
           <>
             <ControlsPanel />
             <div className="mt-auto pt-4">
-              <ExportButton onExport={handleExport} />
+              <LaunchButton onClick={() => setShowLaunchModal(true)} />
             </div>
           </>
         }
       />
 
-      {lastSubmission && (
-        <ExportSuccessModal
-          fileUrl={lastSubmission.fileUrl}
-          onClose={() => setLastSubmission(null)}
+      {showLaunchModal && (
+        <LaunchModal
+          templateName={template.name}
+          formatName={format?.label ?? format?.name ?? "Default"}
+          formatSize={format ? `${format.width}×${format.height}` : ""}
+          selections={layerSelections}
+          assetBanks={bankMeta}
+          layers={editableLayers}
+          onPublish={handlePublish}
+          onClose={() => setShowLaunchModal(false)}
         />
       )}
     </>

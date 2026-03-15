@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { LayoutDashboard, FileImage, History } from "lucide-react";
 
 export default async function AdminLayout({
@@ -8,20 +8,11 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const cookieStore = await cookies();
+  const role = cookieStore.get("dev-role")?.value;
 
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") redirect("/dashboard");
+  if (!role) redirect("/login");
+  if (role !== "admin") redirect("/dashboard");
 
   return (
     <div className="flex min-h-screen">

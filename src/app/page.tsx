@@ -1,45 +1,28 @@
+"use client";
+
 import Link from "next/link";
-import { SEED_TEMPLATES } from "@/lib/seed/templates";
+import { Globe } from "@/components/ui/globe";
+import { Button } from "@/components/ui/button";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center bg-[#F8F7F7] px-6 py-16">
-      <div className="w-full max-w-4xl">
-        <h1 className="mb-2 text-3xl font-bold tracking-tight">
-          Creative Builder
-        </h1>
-        <p className="mb-10 text-muted-foreground">
-          Select a template to start customizing your creative asset.
-        </p>
-
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {SEED_TEMPLATES.map((template) => (
-            <Link
-              key={template.id}
-              href={`/builder/${template.slug}`}
-              className="group overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md"
-            >
-              <div className="aspect-video w-full overflow-hidden bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={template.thumbnail}
-                  alt={template.name}
-                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                />
-              </div>
-              <div className="p-4">
-                <h2 className="font-semibold">{template.name}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {template.description}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {template.formats.length} format{template.formats.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
+    <div className="relative flex h-screen w-full flex-col items-center overflow-hidden bg-background">
+      {/* Text positioned in upper portion */}
+      <div className="z-10 flex flex-col items-center pt-[15vh]">
+        <span className="pointer-events-none whitespace-pre-wrap bg-gradient-to-b from-black to-gray-300/80 bg-clip-text text-center text-8xl font-semibold leading-none text-transparent dark:from-white dark:to-slate-900/10">
+          Create.
+        </span>
+        <Link href="/login" className="mt-6">
+          <Button size="lg">Enter</Button>
+        </Link>
       </div>
+
+      {/* Globe anchored to bottom, overflowing below viewport */}
+      <div className="absolute bottom-0 left-1/2 h-[132vh] w-[132vh] -translate-x-1/2 translate-y-[40%]">
+        <Globe className="top-0" />
+      </div>
+
+      <div className="pointer-events-none absolute inset-0 h-full bg-[radial-gradient(circle_at_50%_200%,rgba(0,0,0,0.2),rgba(255,255,255,0))]" />
     </div>
   );
 }

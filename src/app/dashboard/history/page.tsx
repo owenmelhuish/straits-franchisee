@@ -1,15 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSubmissions } from "@/lib/supabase/db";
+import { getDevUser } from "@/lib/dev-auth";
 import { SubmissionRow } from "@/components/dashboard/submission-row";
 
 export default async function HistoryPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const devUser = await getDevUser();
 
-  const submissions = user
-    ? await getSubmissions(supabase, { userId: user.id })
+  const submissions = devUser
+    ? await getSubmissions(supabase, { userId: devUser.id })
     : [];
 
   return (

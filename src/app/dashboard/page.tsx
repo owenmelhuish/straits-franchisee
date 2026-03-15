@@ -1,10 +1,16 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getTemplates } from "@/lib/supabase/db";
 import { TemplateCard } from "@/components/dashboard/template-card";
 import { SEED_TEMPLATES } from "@/lib/seed/templates";
 import Link from "next/link";
+import { Plus } from "lucide-react";
 
 export default async function DashboardPage() {
+  const cookieStore = await cookies();
+  const role = cookieStore.get("dev-role")?.value;
+  const isAdmin = role === "admin";
+
   let dbTemplates: Awaited<ReturnType<typeof getTemplates>> = [];
 
   try {
@@ -23,6 +29,7 @@ export default async function DashboardPage() {
 
       {dbTemplates.length > 0 ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {isAdmin && <CreateNewCard />}
           {dbTemplates.map((template) => (
             <TemplateCard key={template.id} template={template} />
           ))}
@@ -31,6 +38,7 @@ export default async function DashboardPage() {
         <>
           {/* Fallback to seed templates when no DB templates exist */}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {isAdmin && <CreateNewCard />}
             {SEED_TEMPLATES.map((template) => (
               <Link
                 key={template.id}
@@ -61,5 +69,24 @@ export default async function DashboardPage() {
         </>
       )}
     </div>
+  );
+}
+
+function CreateNewCard() {
+  return (
+    <Link
+      href="/admin/templates/new"
+      className="group flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-muted-foreground/25 bg-white shadow-sm transition-all hover:border-primary hover:shadow-md"
+    >
+      <div className="flex flex-1 flex-col items-center justify-center p-8">
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/20">
+          <Plus className="h-6 w-6 text-primary" />
+        </div>
+        <h2 className="font-semibold">Create New</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Upload a PSD template
+        </p>
+      </div>
+    </Link>
   );
 }

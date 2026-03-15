@@ -1,31 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSubmissions, createSubmission } from "@/lib/supabase/db";
+import { getDevUser } from "@/lib/dev-auth";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
+  const devUser = await getDevUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  if (!devUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
 
   const templateId = request.nextUrl.searchParams.get("templateId") ?? undefined;
 
   try {
     // Admin sees all submissions, franchisee sees only their own
     const filters =
-      profile?.role === "admin"
+      devUser.role === "admin"
         ? { templateId }
-        : { userId: user.id, templateId };
+        : { userId: devUser.id, templateId };
 
     const submissions = await getSubmissions(supabase, filters);
     return NextResponse.json(submissions);
@@ -39,11 +32,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
+  const devUser = await getDevUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  if (!devUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -51,7 +42,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const submission = await createSubmission(supabase, {
       ...body,
-      user_id: user.id,
+      user_id: devUser.id,
     });
     return NextResponse.json(submission, { status: 201 });
   } catch {

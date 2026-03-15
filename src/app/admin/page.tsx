@@ -32,7 +32,7 @@ export default async function AdminDashboard() {
           className="flex items-center gap-3 rounded-xl border bg-white p-6 shadow-sm hover:shadow-md"
         >
           <Upload className="h-5 w-5 text-primary" />
-          <span className="font-medium">Upload PSD</span>
+          <span className="font-medium">Create New</span>
         </Link>
       </div>
     </div>

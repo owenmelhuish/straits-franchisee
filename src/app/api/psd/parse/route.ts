@@ -3,24 +3,17 @@ import { createClient } from "@/lib/supabase/server";
 import { parsePsdToTemplateConfig } from "@/lib/psd/parser";
 import { createTemplate } from "@/lib/supabase/db";
 import { templateConfigToRow } from "@/types/database";
+import { getDevUser } from "@/lib/dev-auth";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
+  const devUser = await getDevUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
+  if (!devUser) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "admin") {
+  if (devUser.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -63,7 +56,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Save as draft template
-    const row = templateConfigToRow(config, user.id, "draft");
+    const row = templateConfigToRow(config, devUser.id, "draft");
     const template = await createTemplate(supabase, row);
 
     return NextResponse.json(template, { status: 201 });

@@ -1,5 +1,5 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/layout/dashboard-nav";
 
 export default async function DashboardLayout({
@@ -7,25 +7,17 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const cookieStore = await cookies();
+  const role = cookieStore.get("dev-role")?.value;
 
-  if (!user) redirect("/login");
+  if (!role) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
+  const isAdmin = role === "admin";
+  const userName = isAdmin ? "Admin User" : "Franchisee User";
 
   return (
     <div className="flex min-h-screen flex-col">
-      <DashboardNav
-        userName={profile?.full_name || profile?.email || user.email || "User"}
-        isAdmin={profile?.role === "admin"}
-      />
+      <DashboardNav userName={userName} isAdmin={isAdmin} />
       <main className="flex-1 bg-[#F8F7F7] p-8">{children}</main>
     </div>
   );
