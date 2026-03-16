@@ -7,12 +7,26 @@ import { extractLayerImages, uploadExtractedImages } from "./image-extractor";
 interface ParseOptions {
   uploadFn: (buffer: Buffer, path: string, contentType: string) => Promise<string>;
   slug: string;
+  name?: string;
+}
+
+export interface ParseStats {
+  totalLayers: number;
+  imagesExtracted: number;
+  textLayers: number;
+  rectLayers: number;
+}
+
+export interface ParseResult {
+  config: TemplateConfig;
+  warnings: string[];
+  stats: ParseStats;
 }
 
 export async function parsePsdToTemplateConfig(
   buffer: ArrayBuffer,
   options: ParseOptions
-): Promise<TemplateConfig> {
+): Promise<ParseResult> {
   // Initialize ag-psd for Node.js (no DOM canvas)
   const helpers = await import("ag-psd/dist/helpers");
   try {
@@ -32,12 +46,18 @@ export async function parsePsdToTemplateConfig(
 
   resetLayerCounter();
 
-  // Extract and upload layer images
-  const extractedImages = await extractLayerImages(psd.children ?? []);
+  // Extract and upload layer images (returns index-keyed map)
+  const { images: extractedImages, warnings: extractionWarnings } =
+    await extractLayerImages(psd.children ?? []);
   const imageUrlMap = await uploadExtractedImages(
     extractedImages,
     options.slug,
     options.uploadFn
+  );
+
+  // Collect warnings as strings
+  const warnings: string[] = extractionWarnings.map(
+    (w) => `Layer "${w.layerName}": ${w.reason}`
   );
 
   // Check for artboards
@@ -55,8 +75,9 @@ export async function parsePsdToTemplateConfig(
       const width = (artboard.right ?? psd.width) - left;
       const height = (artboard.bottom ?? psd.height) - top;
 
-      const layers = flattenLayers(artboard.children ?? []).map(
-        (layer, zIdx) => mapPsdLayer(layer, zIdx, imageUrlMap)
+      const flatLayers = flattenLayers(artboard.children ?? []);
+      const layers = flatLayers.map(
+        (item, zIdx) => mapPsdLayer(item.layer, zIdx, imageUrlMap, item.flatIndex)
       ).filter(Boolean) as TemplateLayer[];
 
       // Offset layers relative to artboard origin
@@ -75,8 +96,9 @@ export async function parsePsdToTemplateConfig(
     });
   } else {
     // Single PSD → one format
-    const layers = flattenLayers(psd.children ?? []).map(
-      (layer, zIdx) => mapPsdLayer(layer, zIdx, imageUrlMap)
+    const flatLayers = flattenLayers(psd.children ?? []);
+    const layers = flatLayers.map(
+      (item, zIdx) => mapPsdLayer(item.layer, zIdx, imageUrlMap, item.flatIndex)
     ).filter(Boolean) as TemplateLayer[];
 
     formats = [
@@ -90,26 +112,51 @@ export async function parsePsdToTemplateConfig(
     ];
   }
 
-  return {
+  // Compute stats
+  const allLayers = formats.flatMap((f) => f.layers);
+  const stats: ParseStats = {
+    totalLayers: allLayers.length,
+    imagesExtracted: allLayers.filter((l) => l.type === "image" && l.src).length,
+    textLayers: allLayers.filter((l) => l.type === "text").length,
+    rectLayers: allLayers.filter((l) => l.type === "rect").length,
+  };
+
+  const displayName =
+    options.name ||
+    options.slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const config: TemplateConfig = {
     id: crypto.randomUUID(),
-    name: options.slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    name: displayName,
     slug: options.slug,
     description: "",
     thumbnail: "",
     formats,
     assetBanks: [],
   };
+
+  return { config, warnings, stats };
 }
 
-function flattenLayers(layers: Layer[]): Layer[] {
-  const result: Layer[] = [];
+interface FlatLayerItem {
+  layer: Layer;
+  flatIndex: number;
+}
+
+function flattenLayers(
+  layers: Layer[],
+  state: { index: number } = { index: 0 }
+): FlatLayerItem[] {
+  const result: FlatLayerItem[] = [];
   for (const layer of layers) {
+    // Skip hidden layers
+    if (layer.hidden) continue;
+
     if (layer.children && !layer.artboard) {
-      result.push(...flattenLayers(layer.children));
-    } else if (!layer.children || layer.children.length === 0) {
-      result.push(layer);
+      result.push(...flattenLayers(layer.children, state));
     } else {
-      result.push(layer);
+      result.push({ layer, flatIndex: state.index });
+      state.index++;
     }
   }
   return result;

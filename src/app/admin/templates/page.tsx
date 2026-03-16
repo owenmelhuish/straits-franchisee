@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getTemplates } from "@/lib/supabase/db";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function AdminTemplatesPage() {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data: templates } = await getTemplates(supabase);
 
   return (

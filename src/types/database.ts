@@ -21,7 +21,7 @@ export interface TemplateRow {
     formats: TemplateConfig["formats"];
     assetBanks: TemplateConfig["assetBanks"];
   };
-  created_by: string;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -55,7 +55,7 @@ export function templateRowToConfig(row: TemplateRow): TemplateConfig {
 // Convert TemplateConfig → DB insert payload
 export function templateConfigToRow(
   config: TemplateConfig,
-  createdBy: string,
+  createdBy: string | null,
   status: TemplateRow["status"] = "draft"
 ): Omit<TemplateRow, "id" | "created_at" | "updated_at"> {
   return {

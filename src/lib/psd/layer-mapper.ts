@@ -10,7 +10,8 @@ export function resetLayerCounter() {
 export function mapPsdLayer(
   layer: Layer,
   zIndex: number,
-  imageUrlMap: Map<string, string>
+  imageUrlMap: Map<number, string>,
+  flatIndex: number
 ): TemplateLayer | null {
   const left = layer.left ?? 0;
   const top = layer.top ?? 0;
@@ -48,8 +49,8 @@ export function mapPsdLayer(
     };
   }
 
-  // Check if we have a rasterized image for this layer
-  const imageUrl = imageUrlMap.get(name) || imageUrlMap.get(id);
+  // Check if we have a rasterized image for this layer (keyed by flat index)
+  const imageUrl = imageUrlMap.get(flatIndex);
   if (imageUrl || layer.canvas) {
     return {
       id,

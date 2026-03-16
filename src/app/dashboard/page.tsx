@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getTemplates } from "@/lib/supabase/db";
 import { TemplateRow } from "@/types/database";
 import { TemplateCard } from "@/components/dashboard/template-card";
@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   let dbTemplates: TemplateRow[] = [];
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const result = await getTemplates(supabase, "active");
     dbTemplates = result.data;
   } catch {

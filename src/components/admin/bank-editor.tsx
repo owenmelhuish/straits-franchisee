@@ -18,7 +18,7 @@ export function BankEditor({ banks, onBanksChange }: BankEditorProps) {
     if (!newBankName.trim()) return;
     onBanksChange([
       ...banks,
-      { name: newBankName.trim(), type: newBankType, items: [] },
+      { id: crypto.randomUUID(), name: newBankName.trim(), type: newBankType, items: [] },
     ]);
     setNewBankName("");
   }

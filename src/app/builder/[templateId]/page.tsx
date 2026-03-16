@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getTemplateBySlug, getTemplateById } from "@/lib/supabase/db";
 import { templateRowToConfig } from "@/types/database";
 import { BuilderView } from "@/components/builder/builder-view";
@@ -18,7 +18,7 @@ export default async function BuilderPage({ params }: PageProps) {
 
   // Try Supabase first, fall back to seed data
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const row =
       (await getTemplateBySlug(supabase, templateId)) ??
       (await getTemplateById(supabase, templateId).catch(() => null));

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getTemplates, createTemplate } from "@/lib/supabase/db";
 import { getDevUser } from "@/lib/dev-auth";
 import { validateBody, templateCreateRules } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const status = request.nextUrl.searchParams.get("status") as
     | "draft"
     | "active"
@@ -42,15 +42,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    const template = await createTemplate(supabase, {
+    const adminClient = createAdminClient();
+    const template = await createTemplate(adminClient, {
       ...body,
-      created_by: devUser.id,
+      created_by: devUser?.id ?? null,
     });
     return NextResponse.json(template, { status: 201 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to create template" },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("POST /api/templates error:", error);
+
+    // Supabase errors include a `code` property
+    const pgCode = (error as { code?: string })?.code;
+    if (pgCode === "23505") {
+      return NextResponse.json(
+        { error: "A template with this slug already exists. Choose a different slug." },
+        { status: 409 }
+      );
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Failed to create template";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

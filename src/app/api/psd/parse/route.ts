@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { parsePsdToTemplateConfig } from "@/lib/psd/parser";
 import { createTemplate } from "@/lib/supabase/db";
 import { templateConfigToRow } from "@/types/database";
 import { getDevUser } from "@/lib/dev-auth";
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const devUser = await getDevUser();
 
   if (!devUser) {
@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   const slug = (formData.get("slug") as string) || `template-${Date.now()}`;
+  const name = (formData.get("name") as string) || "";
 
   if (!file) {
     return NextResponse.json({ error: "PSD file is required" }, { status: 400 });
@@ -30,6 +31,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Ensure the "templates" bucket exists
+    const { error: bucketError } = await supabase.storage.createBucket("templates", {
+      public: true,
+    });
+    if (bucketError && !bucketError.message.includes("already exists")) {
+      throw new Error(`Storage bucket error: ${bucketError.message}`);
+    }
+
     const buffer = await file.arrayBuffer();
 
     // Upload function that writes to Supabase Storage
@@ -50,16 +59,17 @@ export async function POST(request: NextRequest) {
       return publicUrl;
     };
 
-    const config = await parsePsdToTemplateConfig(buffer, {
+    const { config, warnings, stats } = await parsePsdToTemplateConfig(buffer, {
       uploadFn,
       slug,
+      name: name || undefined,
     });
 
     // Save as draft template
     const row = templateConfigToRow(config, devUser.id, "draft");
     const template = await createTemplate(supabase, row);
 
-    return NextResponse.json(template, { status: 201 });
+    return NextResponse.json({ template, warnings, stats }, { status: 201 });
   } catch (error) {
     console.error("PSD parse error:", error);
     return NextResponse.json(

@@ -1,12 +1,10 @@
-import { PsdUpload } from "@/components/admin/psd-upload";
+import { MapperShell } from "@/components/mapper/mapper-shell";
 
 export default function NewTemplatePage() {
   return (
-    <div className="mx-auto max-w-lg">
-      <h1 className="mb-6 text-2xl font-bold">Upload PSD</h1>
-      <div className="rounded-xl border bg-white p-6 shadow-sm">
-        <PsdUpload />
-      </div>
+    <div className="p-4">
+      <h1 className="mb-4 text-2xl font-bold">Create New Template</h1>
+      <MapperShell />
     </div>
   );
 }

@@ -40,6 +40,7 @@ export interface AssetBankItem {
 }
 
 export interface AssetBank {
+  id: string;
   name: string;
   type: "image" | "text";
   items: AssetBankItem[];

@@ -293,6 +293,7 @@ export const SEED_TEMPLATES: TemplateConfig[] = [
     ],
     assetBanks: [
       {
+        id: "bank-backgrounds",
         name: "backgrounds",
         type: "image",
         items: [
@@ -302,6 +303,7 @@ export const SEED_TEMPLATES: TemplateConfig[] = [
         ],
       },
       {
+        id: "bank-products",
         name: "products",
         type: "image",
         items: [
@@ -311,6 +313,7 @@ export const SEED_TEMPLATES: TemplateConfig[] = [
         ],
       },
       {
+        id: "bank-headlines",
         name: "headlines",
         type: "text",
         items: [
@@ -321,6 +324,7 @@ export const SEED_TEMPLATES: TemplateConfig[] = [
         ],
       },
       {
+        id: "bank-subtexts",
         name: "subtexts",
         type: "text",
         items: [

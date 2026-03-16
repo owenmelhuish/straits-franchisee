@@ -13,3 +13,9 @@ export const LAYOUT = {
   LEFT_PANEL_WIDTH: 280,
   RIGHT_PANEL_WIDTH: 320,
 } as const;
+
+export const STANDARD_FORMATS = [
+  { name: "story", label: "Story (9:16)", width: 1080, height: 1920 },
+  { name: "square", label: "Square (1:1)", width: 1080, height: 1080 },
+  { name: "landscape", label: "Landscape (16:9)", width: 1920, height: 1080 },
+] as const;

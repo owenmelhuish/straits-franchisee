@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getTemplateById, updateTemplate, deleteTemplate } from "@/lib/supabase/db";
 import { getDevUser } from "@/lib/dev-auth";
 import { validateBody, templateUpdateRules } from "@/lib/validation";
@@ -10,7 +10,7 @@ interface RouteContext {
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   try {
     const template = await getTemplateById(supabase, id);
@@ -22,7 +22,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
 export async function PUT(request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
-  const supabase = await createClient();
   const devUser = await getDevUser();
 
   if (!devUser) {
@@ -40,6 +39,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
+    const supabase = createAdminClient();
     const template = await updateTemplate(supabase, id, body);
     return NextResponse.json(template);
   } catch {
@@ -52,7 +52,6 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
 export async function DELETE(_request: NextRequest, context: RouteContext) {
   const { id } = await context.params;
-  const supabase = await createClient();
   const devUser = await getDevUser();
 
   if (!devUser) {
@@ -64,6 +63,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   }
 
   try {
+    const supabase = createAdminClient();
     await deleteTemplate(supabase, id);
     return NextResponse.json({ success: true });
   } catch {
