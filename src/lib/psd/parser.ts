@@ -3,11 +3,13 @@ import type { Layer } from "ag-psd";
 import { TemplateConfig, TemplateFormat, TemplateLayer } from "@/types/template";
 import { mapPsdLayer, resetLayerCounter } from "./layer-mapper";
 import { extractLayerImages, uploadExtractedImages } from "./image-extractor";
+import { STANDARD_FORMATS } from "@/lib/constants";
 
 interface ParseOptions {
   uploadFn: (buffer: Buffer, path: string, contentType: string) => Promise<string>;
   slug: string;
   name?: string;
+  format?: string; // e.g. "story", "square", "landscape"
 }
 
 export interface ParseStats {
@@ -101,12 +103,17 @@ export async function parsePsdToTemplateConfig(
       (item, zIdx) => mapPsdLayer(item.layer, zIdx, imageUrlMap, item.flatIndex)
     ).filter(Boolean) as TemplateLayer[];
 
+    // Use the selected standard format if provided, otherwise fall back to PSD dimensions
+    const selectedStdFormat = options.format
+      ? STANDARD_FORMATS.find((f) => f.name === options.format)
+      : undefined;
+
     formats = [
       {
-        name: "default",
-        label: `Default (${psd.width}x${psd.height})`,
-        width: psd.width,
-        height: psd.height,
+        name: selectedStdFormat?.name ?? "default",
+        label: selectedStdFormat?.label ?? `Default (${psd.width}x${psd.height})`,
+        width: selectedStdFormat?.width ?? psd.width,
+        height: selectedStdFormat?.height ?? psd.height,
         layers,
       },
     ];

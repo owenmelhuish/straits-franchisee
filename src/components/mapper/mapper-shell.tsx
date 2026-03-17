@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useMapperCanvas } from "@/hooks/use-mapper-canvas";
 import { useMapperStore } from "@/stores/mapper-store";
 import { AssetPanel } from "./asset-panel";
@@ -8,7 +8,16 @@ import { InteractiveCanvas } from "./interactive-canvas";
 import { PropertiesPanel } from "./properties-panel";
 import { TemplateLayer } from "@/types/template";
 
-export function MapperShell() {
+interface MapperShellProps {
+  initialFormat?: {
+    name: string;
+    label: string;
+    width: number;
+    height: number;
+  };
+}
+
+export function MapperShell({ initialFormat }: MapperShellProps) {
   const {
     canvasRef,
     addImageLayer,
@@ -20,6 +29,27 @@ export function MapperShell() {
   } = useMapperCanvas();
 
   const formats = useMapperStore((s) => s.formats);
+  const initialized = useRef(false);
+
+  // Initialize store with the single selected format
+  useEffect(() => {
+    if (initialFormat && !initialized.current) {
+      initialized.current = true;
+      useMapperStore.setState({
+        formats: [
+          {
+            name: initialFormat.name,
+            label: initialFormat.label,
+            width: initialFormat.width,
+            height: initialFormat.height,
+            layers: [],
+          },
+        ],
+        activeFormatIndex: 0,
+      });
+      resizeCanvas(initialFormat.width, initialFormat.height);
+    }
+  }, [initialFormat, resizeCanvas]);
 
   const handleFormatChange = useCallback(
     (index: number) => {

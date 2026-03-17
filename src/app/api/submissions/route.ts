@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getSubmissions, createSubmission } from "@/lib/supabase/db";
 import { getDevUser } from "@/lib/dev-auth";
 import { validateBody, submissionRules } from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const devUser = await getDevUser();
 
   if (!devUser) {
@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
 
     const { data: submissions, count } = await getSubmissions(supabase, filters);
     return NextResponse.json({ data: submissions, count });
-  } catch {
+  } catch (err) {
+    console.error("Failed to fetch submissions:", err);
     return NextResponse.json(
       { error: "Failed to fetch submissions" },
       { status: 500 }
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const devUser = await getDevUser();
 
   if (!devUser) {
@@ -51,7 +52,8 @@ export async function POST(request: NextRequest) {
       user_id: devUser.id,
     });
     return NextResponse.json(submission, { status: 201 });
-  } catch {
+  } catch (err) {
+    console.error("Failed to create submission:", err);
     return NextResponse.json(
       { error: "Failed to create submission" },
       { status: 500 }

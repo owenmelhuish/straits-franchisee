@@ -8,6 +8,11 @@ export interface Profile {
   full_name: string | null;
   role: UserRole;
   created_at: string;
+  // Meta Ads integration
+  meta_access_token: string | null;
+  meta_token_expires_at: string | null;
+  meta_ad_account_id: string | null;
+  meta_page_id: string | null;
 }
 
 export interface TemplateRow {
@@ -37,6 +42,10 @@ export interface SubmissionRow {
   campaign_end: string | null;
   budget: number | null;
   created_at: string;
+  // Meta Ads integration
+  meta_ad_id: string | null;
+  meta_campaign_id: string | null;
+  meta_status: string | null;
 }
 
 // Convert DB row → TemplateConfig (what the canvas engine expects)

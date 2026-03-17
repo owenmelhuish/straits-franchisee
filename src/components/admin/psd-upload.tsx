@@ -18,7 +18,11 @@ interface ParseResultData {
   stats: ParseStats;
 }
 
-export function PsdUpload() {
+interface PsdUploadProps {
+  formatName?: string;
+}
+
+export function PsdUpload({ formatName }: PsdUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
@@ -83,6 +87,9 @@ export function PsdUpload() {
     formData.append("file", file);
     formData.append("slug", slug);
     formData.append("name", name);
+    if (formatName) {
+      formData.append("format", formatName);
+    }
 
     try {
       const res = await fetch("/api/psd/parse", {

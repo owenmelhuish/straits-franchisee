@@ -1,12 +1,13 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getSubmissions } from "@/lib/supabase/db";
 import { getDevUser } from "@/lib/dev-auth";
 import { SubmissionRow } from "@/components/dashboard/submission-row";
 
 export default async function HistoryPage() {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const devUser = await getDevUser();
 
+  // getSubmissions already joins templates; the meta_* columns come from the submissions table automatically
   const { data: submissions } = devUser
     ? await getSubmissions(supabase, { userId: devUser.id })
     : { data: [] };

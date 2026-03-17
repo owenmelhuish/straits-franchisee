@@ -88,20 +88,27 @@ export function BuilderView({ template }: BuilderViewProps) {
       try {
         setExporting(true);
         const blob = await getBlob();
-        if (blob) {
-          await exportToStorage({
-            blob,
-            userId,
-            templateId: template.id,
-            templateSlug: template.slug,
-            formatName,
-            selections: layerSelections,
-            campaign,
-          });
-        }
-        toast.success("Campaign published successfully!", {
-          description: "Your creative has been exported and saved.",
+        if (!blob) throw new Error("Failed to generate image");
+        const result = await exportToStorage({
+          blob,
+          userId,
+          templateId: template.id,
+          templateSlug: template.slug,
+          templateName: template.name,
+          formatName,
+          selections: layerSelections,
+          campaign,
         });
+        toast.success(
+          result.metaAdId
+            ? "Published to Meta Ads!"
+            : "Campaign published successfully!",
+          {
+            description: result.metaAdId
+              ? "Your ad has been created in PAUSED status. Review it in Meta Ads Manager."
+              : "Your creative has been exported and saved.",
+          }
+        );
       } catch (err) {
         console.error("Failed to save to storage:", err);
         toast.error("Failed to save campaign", {

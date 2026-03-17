@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LogOut, LayoutDashboard, Shield, History, ArrowLeftRight } from "lucide-react";
+import { LogOut, LayoutDashboard, Shield, History, ArrowLeftRight, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface DashboardNavProps {
@@ -45,6 +45,13 @@ export function DashboardNav({ userName, isAdmin }: DashboardNavProps) {
         >
           <History className="h-4 w-4" />
           History
+        </Link>
+        <Link
+          href="/dashboard/settings"
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <Settings className="h-4 w-4" />
+          Settings
         </Link>
         {isAdmin && (
           <Link

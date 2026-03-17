@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
   const file = formData.get("file") as File | null;
   const slug = (formData.get("slug") as string) || `template-${Date.now()}`;
   const name = (formData.get("name") as string) || "";
+  const formatName = (formData.get("format") as string) || undefined;
 
   if (!file) {
     return NextResponse.json({ error: "PSD file is required" }, { status: 400 });
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
       uploadFn,
       slug,
       name: name || undefined,
+      format: formatName,
     });
 
     // Save as draft template
