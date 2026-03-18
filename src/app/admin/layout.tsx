@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { LayoutDashboard, FileImage, History } from "lucide-react";
+import { LayoutDashboard, FileImage, History, BarChart3 } from "lucide-react";
 
 export default async function AdminLayout({
   children,
@@ -27,6 +27,9 @@ export default async function AdminLayout({
           </SideLink>
           <SideLink href="/admin/submissions" icon={<History className="h-4 w-4" />}>
             Submissions
+          </SideLink>
+          <SideLink href="/admin/analytics" icon={<BarChart3 className="h-4 w-4" />}>
+            Analytics
           </SideLink>
         </nav>
         <div className="mt-auto">

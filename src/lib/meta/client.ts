@@ -28,6 +28,53 @@ async function metaPost(
   return json;
 }
 
+// ── Helper: GET from Meta Graph API ──
+
+export async function metaGet(
+  endpoint: string,
+  accessToken: string,
+  params: Record<string, string> = {}
+): Promise<Record<string, unknown>> {
+  const query = new URLSearchParams({ access_token: accessToken, ...params });
+  const res = await fetch(`${META_API}/${endpoint}?${query}`);
+  const json = await res.json();
+  if (json.error) {
+    const err = json.error as { code?: number; error_user_msg?: string; message?: string };
+    const error = new Error(err.error_user_msg || err.message || "Meta API error");
+    (error as Error & { code?: number }).code = err.code;
+    throw error;
+  }
+  return json;
+}
+
+// ── Insights Fetching ──
+
+const INSIGHT_FIELDS = "impressions,reach,clicks,spend,cpm";
+
+export async function fetchAdInsights(
+  accessToken: string,
+  adId: string,
+  params: { since: string; until: string; timeIncrement?: string }
+) {
+  return metaGet(`${adId}/insights`, accessToken, {
+    fields: INSIGHT_FIELDS,
+    time_range: JSON.stringify({ since: params.since, until: params.until }),
+    ...(params.timeIncrement ? { time_increment: params.timeIncrement } : {}),
+  });
+}
+
+export async function fetchAccountInsights(
+  accessToken: string,
+  adAccountId: string,
+  params: { since: string; until: string; timeIncrement?: string }
+) {
+  return metaGet(`${adAccountId}/insights`, accessToken, {
+    fields: INSIGHT_FIELDS,
+    time_range: JSON.stringify({ since: params.since, until: params.until }),
+    ...(params.timeIncrement ? { time_increment: params.timeIncrement } : {}),
+  });
+}
+
 // ── Token Exchange ──
 
 export async function exchangeCodeForToken(code: string) {
