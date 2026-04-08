@@ -15,7 +15,7 @@ export function LaunchButton({ onClick }: LaunchButtonProps) {
     <Button
       onClick={onClick}
       disabled={!isCanvasReady}
-      className="w-full"
+      className="w-full rounded-xl bg-[#1A1A1A] text-[13px] font-medium text-white hover:bg-[#333333] disabled:opacity-40"
       size="lg"
     >
       <Rocket className="mr-2 h-4 w-4" />

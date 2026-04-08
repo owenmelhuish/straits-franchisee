@@ -27,9 +27,11 @@ const WEIGHT_OPTIONS = [
 interface LayerPropertiesFormProps {
   layer: TemplateLayer;
   onUpdate: (id: string, updates: Partial<TemplateLayer>) => void;
+  /** When true, hides the inline bank items list (because a richer editor handles it externally) */
+  hideBankItems?: boolean;
 }
 
-export function LayerPropertiesForm({ layer, onUpdate }: LayerPropertiesFormProps) {
+export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPropertiesFormProps) {
   const { assetBanks, addAssetBank, addBankItem, removeBankItem } = useMapperStore();
   const [showCreateBank, setShowCreateBank] = useState(false);
   const [newBankName, setNewBankName] = useState("");
@@ -325,8 +327,8 @@ export function LayerPropertiesForm({ layer, onUpdate }: LayerPropertiesFormProp
             </div>
           )}
 
-          {/* Inline bank items — shown when a bank is linked */}
-          {linkedBank && (
+          {/* Inline bank items — shown when a bank is linked (hidden when external editor handles it) */}
+          {linkedBank && !hideBankItems && (
             <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">

@@ -6,7 +6,7 @@ import {
   selectActiveFormat,
   selectAssetBank,
 } from "@/stores/builder-store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { AssetDropdown } from "./asset-dropdown";
 
 export function ControlsPanel() {
@@ -23,14 +23,12 @@ export function ControlsPanel() {
     .sort((a, b) => a.zIndex - b.zIndex);
 
   return (
-    <Card className="border-0 shadow-none">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Settings2 className="h-4 w-4" />
-          Controls
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div>
+      <h3 className="mb-3 flex items-center gap-2 text-[14px] font-medium text-[#1A1A1A]">
+        <Settings2 className="h-4 w-4 text-[#A5A5A5]" />
+        Controls
+      </h3>
+      <div className="space-y-4">
         {editableLayers.map((layer) => {
           const bank = template.assetBanks.find(
             (b) => b.name === layer.linkedBank
@@ -51,7 +49,7 @@ export function ControlsPanel() {
             />
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

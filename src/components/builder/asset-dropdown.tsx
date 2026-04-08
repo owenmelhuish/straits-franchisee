@@ -19,7 +19,7 @@ interface AssetDropdownProps {
 export function AssetDropdown({ bank, value, onChange }: AssetDropdownProps) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs capitalize text-muted-foreground">
+      <Label className="text-[11px] font-medium capitalize text-[#A5A5A5]">
         {bank.name}
       </Label>
       <Select value={value} onValueChange={(val) => { if (val) onChange(val); }}>

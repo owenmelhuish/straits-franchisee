@@ -15,7 +15,7 @@ import { exportToStorage } from "@/lib/canvas/export-to-storage";
 import { toast } from "sonner";
 import { TemplateConfig } from "@/types/template";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes-warning";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Download } from "lucide-react";
 
 interface BuilderViewProps {
   template: TemplateConfig;
@@ -31,7 +31,6 @@ export function BuilderView({ template }: BuilderViewProps) {
   const [userId, setUserId] = useState<string | null>(null);
   const [showLaunchModal, setShowLaunchModal] = useState(false);
 
-  // Warn before leaving with unsaved changes
   const defaultSelections = useMemo(() => {
     const defaults: Record<string, string> = {};
     for (const fmt of template.formats) {
@@ -64,12 +63,10 @@ export function BuilderView({ template }: BuilderViewProps) {
     onReady: handleReady,
   });
 
-  // Initialize template in store
   useEffect(() => {
     setTemplate(template);
   }, [template, setTemplate]);
 
-  // Get dev user ID from cookie
   useEffect(() => {
     const match = document.cookie.match(/(?:^|; )dev-role=([^;]*)/);
     if (match) {
@@ -77,56 +74,56 @@ export function BuilderView({ template }: BuilderViewProps) {
     }
   }, []);
 
-  const handlePublish = useCallback(async (campaign: CampaignData) => {
-    const formatName = format?.name ?? "creative";
+  const handlePublish = useCallback(
+    async (campaign: CampaignData) => {
+      const formatName = format?.name ?? "creative";
+      exportPng(`${template.slug}-${formatName}.png`);
 
-    // Download the asset
-    exportPng(`${template.slug}-${formatName}.png`);
-
-    // Upload to storage if authenticated
-    if (userId) {
-      try {
-        setExporting(true);
-        const blob = await getBlob();
-        if (!blob) throw new Error("Failed to generate image");
-        const result = await exportToStorage({
-          blob,
-          userId,
-          templateId: template.id,
-          templateSlug: template.slug,
-          templateName: template.name,
-          formatName,
-          selections: layerSelections,
-          campaign,
+      if (userId) {
+        try {
+          setExporting(true);
+          const blob = await getBlob();
+          if (!blob) throw new Error("Failed to generate image");
+          const result = await exportToStorage({
+            blob,
+            userId,
+            templateId: template.id,
+            templateSlug: template.slug,
+            templateName: template.name,
+            formatName,
+            selections: layerSelections,
+            campaign,
+          });
+          toast.success(
+            result.metaAdId
+              ? "Published to Meta Ads!"
+              : "Campaign published successfully!",
+            {
+              description: result.metaAdId
+                ? "Your ad has been created in PAUSED status. Review it in Meta Ads Manager."
+                : "Your creative has been exported and saved.",
+            }
+          );
+        } catch (err) {
+          console.error("Failed to save to storage:", err);
+          toast.error("Failed to save campaign", {
+            description:
+              "Your creative was downloaded but could not be saved to the server.",
+          });
+        } finally {
+          setExporting(false);
+        }
+      } else {
+        toast.success("Creative exported!", {
+          description: "Your PNG has been downloaded.",
         });
-        toast.success(
-          result.metaAdId
-            ? "Published to Meta Ads!"
-            : "Campaign published successfully!",
-          {
-            description: result.metaAdId
-              ? "Your ad has been created in PAUSED status. Review it in Meta Ads Manager."
-              : "Your creative has been exported and saved.",
-          }
-        );
-      } catch (err) {
-        console.error("Failed to save to storage:", err);
-        toast.error("Failed to save campaign", {
-          description: "Your creative was downloaded but could not be saved to the server.",
-        });
-      } finally {
-        setExporting(false);
       }
-    } else {
-      toast.success("Creative exported!", {
-        description: "Your PNG has been downloaded.",
-      });
-    }
 
-    setShowLaunchModal(false);
-  }, [exportPng, getBlob, format, template, userId, layerSelections, setExporting]);
+      setShowLaunchModal(false);
+    },
+    [exportPng, getBlob, format, template, userId, layerSelections, setExporting]
+  );
 
-  // Build props for the review modal
   const editableLayers = (format?.layers ?? [])
     .filter((l) => l.editable && l.linkedBank)
     .map((l) => ({ id: l.id, name: l.name, linkedBank: l.linkedBank }));
@@ -139,32 +136,71 @@ export function BuilderView({ template }: BuilderViewProps) {
   return (
     <>
       <BuilderLayout
+        toolbar={
+          <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-2 shadow-[0px_4px_20px_rgba(0,0,0,0.06)]">
+            <span className="text-[13px] font-medium text-[#666666]">
+              {format?.label ?? ""}
+            </span>
+            <div className="h-4 w-px bg-[#E0E0E0]" />
+            <span className="text-[13px] tabular-nums text-[#A5A5A5]">
+              {Math.round(scale * 100)}%
+            </span>
+            <div className="h-4 w-px bg-[#E0E0E0]" />
+            <button
+              onClick={() =>
+                exportPng(
+                  `${template.slug}-${format?.name ?? "creative"}.png`
+                )
+              }
+              className="flex items-center gap-1.5 rounded-xl bg-[#1A1A1A] px-4 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-[#333333]"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export
+            </button>
+          </div>
+        }
         left={
           <>
             <Link
               href="/dashboard"
-              className="mb-3 flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              className="mb-4 flex items-center gap-1 text-[13px] text-[#A5A5A5] transition-colors hover:text-[#1A1A1A]"
             >
-              <ChevronLeft className="h-4 w-4" />
-              Back to templates
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Back
             </Link>
-            <div className="mb-2">
-              <h2 className="text-lg font-semibold">{template.name}</h2>
-              <p className="text-xs text-muted-foreground">{template.description}</p>
+            <div className="mb-1">
+              <h2 className="text-[16px] font-semibold text-[#1A1A1A]">
+                {template.name}
+              </h2>
+              <p className="mt-0.5 text-[13px] text-[#666666]">
+                {template.description}
+              </p>
             </div>
-            <FormatSwitcher />
-            <LayerPanel />
+
+            <div className="mb-2 mt-4">
+              <FormatSwitcher />
+            </div>
+
+            <div className="mt-2">
+              <LayerPanel />
+            </div>
           </>
         }
         center={
-          <div ref={containerRef} className="flex h-full w-full items-center justify-center">
+          <div
+            ref={containerRef}
+            className="flex h-full w-full items-center justify-center"
+          >
             <div
-              className="overflow-hidden rounded-xl shadow-2xl"
               style={{
                 width: canvasWidth,
                 height: canvasHeight,
                 transform: `scale(${scale})`,
                 transformOrigin: "center",
+                borderRadius: 16,
+                overflow: "hidden",
+                boxShadow:
+                  "0 0 0 1px rgba(0,0,0,0.04), 0 20px 60px rgba(0,0,0,0.10)",
               }}
             >
               <canvas ref={canvasRef} />

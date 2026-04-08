@@ -12,7 +12,7 @@ export function useCanvasScale(
   containerRef: RefObject<HTMLDivElement | null>,
   canvasWidth: number,
   canvasHeight: number,
-  padding: number = 40
+  padding: number = 80
 ): CanvasScale {
   const [scale, setScale] = useState<CanvasScale>({
     scale: 1,

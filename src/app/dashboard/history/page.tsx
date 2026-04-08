@@ -14,12 +14,12 @@ export default async function HistoryPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <h1 className="mb-6 text-2xl font-bold">Export History</h1>
+      <h1 className="mb-6 text-[16px] font-semibold text-[#1A1A1A]">Export History</h1>
 
       {submissions.length === 0 ? (
-        <div className="rounded-xl border bg-white p-12 text-center">
-          <p className="text-muted-foreground">No exports yet.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+        <div className="rounded-3xl bg-white p-12 text-center shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
+          <p className="text-[#666666]">No exports yet.</p>
+          <p className="mt-1 text-[13px] text-[#A5A5A5]">
             Your exported creatives will appear here.
           </p>
         </div>

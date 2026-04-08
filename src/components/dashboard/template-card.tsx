@@ -11,30 +11,30 @@ export function TemplateCard({ template }: TemplateCardProps) {
   return (
     <Link
       href={`/builder/${template.slug}`}
-      className="group overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md"
+      className="group overflow-hidden rounded-3xl bg-white shadow-[0px_4px_20px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0px_12px_32px_rgba(0,0,0,0.08)]"
     >
-      <div className="aspect-video w-full overflow-hidden bg-muted">
+      <div className="aspect-video w-full overflow-hidden bg-[#F4F4F4]">
         {template.thumbnail_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={template.thumbnail_url}
             alt={template.name}
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
-            <span className="text-2xl font-bold text-primary/30">
+          <div className="flex h-full w-full items-center justify-center bg-[#F4F4F4]">
+            <span className="text-2xl font-semibold text-[#A5A5A5]">
               {template.name.charAt(0)}
             </span>
           </div>
         )}
       </div>
-      <div className="p-4">
-        <h2 className="font-semibold">{template.name}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+      <div className="p-5">
+        <h2 className="text-[14px] font-medium text-[#1A1A1A]">{template.name}</h2>
+        <p className="mt-1 text-[13px] text-[#666666]">
           {template.description || "No description"}
         </p>
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-2 text-[11px] font-medium text-[#A5A5A5]">
           {formatCount} format{formatCount !== 1 ? "s" : ""}
         </p>
       </div>

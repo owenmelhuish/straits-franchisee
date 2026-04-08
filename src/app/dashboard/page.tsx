@@ -24,13 +24,13 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="mb-2 text-2xl font-bold">Templates</h1>
-      <p className="mb-8 text-muted-foreground">
+      <h1 className="mb-1 text-[16px] font-semibold text-[#1A1A1A]">Templates</h1>
+      <p className="mb-8 text-[13px] text-[#666666]">
         Select a template to start customizing your creative asset.
       </p>
 
       {dbTemplates.length > 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {isAdmin && <CreateNewCard />}
           {dbTemplates.map((template) => (
             <TemplateCard key={template.id} template={template} />
@@ -39,28 +39,28 @@ export default async function DashboardPage() {
       ) : (
         <>
           {/* Fallback to seed templates when no DB templates exist */}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {isAdmin && <CreateNewCard />}
             {SEED_TEMPLATES.map((template) => (
               <Link
                 key={template.id}
                 href={`/builder/${template.slug}`}
-                className="group overflow-hidden rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md"
+                className="group overflow-hidden rounded-3xl bg-white shadow-[0px_4px_20px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0px_12px_32px_rgba(0,0,0,0.08)]"
               >
-                <div className="aspect-video w-full overflow-hidden bg-muted">
+                <div className="aspect-video w-full overflow-hidden bg-[#F4F4F4]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={template.thumbnail}
                     alt={template.name}
-                    className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                 </div>
-                <div className="p-4">
-                  <h2 className="font-semibold">{template.name}</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">
+                <div className="p-5">
+                  <h2 className="text-[14px] font-medium text-[#1A1A1A]">{template.name}</h2>
+                  <p className="mt-1 text-[13px] text-[#666666]">
                     {template.description}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
+                  <p className="mt-2 text-[11px] font-medium text-[#A5A5A5]">
                     {template.formats.length} format
                     {template.formats.length !== 1 ? "s" : ""}
                   </p>
@@ -77,15 +77,15 @@ export default async function DashboardPage() {
 function CreateNewCard() {
   return (
     <Link
-      href="/admin/templates/new"
-      className="group flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-muted-foreground/25 bg-white shadow-sm transition-all hover:border-primary hover:shadow-md"
+      href="/template-creator"
+      className="group flex flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed border-[#E0E0E0] bg-white shadow-[0px_4px_20px_rgba(0,0,0,0.04)] transition-all hover:border-[#1A1A1A] hover:shadow-[0px_12px_32px_rgba(0,0,0,0.08)]"
     >
       <div className="flex flex-1 flex-col items-center justify-center p-8">
-        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/20">
-          <Plus className="h-6 w-6 text-primary" />
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F4F4F4] transition-colors group-hover:bg-[#E0E0E0]">
+          <Plus className="h-5 w-5 text-[#1A1A1A]" />
         </div>
-        <h2 className="font-semibold">Create New</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h2 className="text-[14px] font-medium text-[#1A1A1A]">Create New</h2>
+        <p className="mt-1 text-[13px] text-[#666666]">
           Upload a PSD template
         </p>
       </div>

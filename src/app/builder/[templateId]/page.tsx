@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTemplateBySlug, getTemplateById } from "@/lib/supabase/db";
 import { templateRowToConfig } from "@/types/database";
-import { BuilderView } from "@/components/builder/builder-view";
+import { FranchiseeBuilder } from "@/components/builder/franchisee-builder";
 import { BuilderErrorBoundary } from "@/components/builder/builder-error-boundary";
 import {
   getTemplateBySlug as getSeedBySlug,
@@ -26,7 +26,7 @@ export default async function BuilderPage({ params }: PageProps) {
     if (row) {
       return (
         <BuilderErrorBoundary>
-          <BuilderView template={templateRowToConfig(row)} />
+          <FranchiseeBuilder template={templateRowToConfig(row)} />
         </BuilderErrorBoundary>
       );
     }
@@ -34,7 +34,7 @@ export default async function BuilderPage({ params }: PageProps) {
     // Supabase not configured — fall through to seed
   }
 
-  // Fallback: seed data (keeps Phase 1 working without Supabase)
+  // Fallback: seed data
   const template = getSeedBySlug(templateId) ?? getSeedById(templateId);
   if (!template) {
     notFound();
@@ -42,7 +42,7 @@ export default async function BuilderPage({ params }: PageProps) {
 
   return (
     <BuilderErrorBoundary>
-      <BuilderView template={template} />
+      <FranchiseeBuilder template={template} />
     </BuilderErrorBoundary>
   );
 }

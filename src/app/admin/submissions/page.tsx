@@ -7,12 +7,12 @@ export default async function AdminSubmissionsPage() {
   const { data: submissions } = await getSubmissions(supabase);
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">All Submissions</h1>
+    <div className="rounded-3xl bg-white p-8 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
+      <h1 className="mb-6 text-[16px] font-semibold text-[#1A1A1A]">All Submissions</h1>
 
       {submissions.length === 0 ? (
-        <div className="rounded-xl border bg-white p-12 text-center">
-          <p className="text-muted-foreground">No submissions yet.</p>
+        <div className="rounded-3xl bg-white p-12 text-center shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
+          <p className="text-[#666666]">No submissions yet.</p>
         </div>
       ) : (
         <div className="space-y-2">

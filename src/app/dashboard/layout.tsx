@@ -16,9 +16,9 @@ export default async function DashboardLayout({
   const userName = isAdmin ? "Admin User" : "Franchisee User";
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col bg-[#F4F4F4]">
       <DashboardNav userName={userName} isAdmin={isAdmin} />
-      <main className="flex-1 bg-[#F8F7F7] p-8">{children}</main>
+      <main className="flex-1 p-8">{children}</main>
     </div>
   );
 }

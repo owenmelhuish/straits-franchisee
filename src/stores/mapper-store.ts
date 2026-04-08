@@ -20,6 +20,10 @@ interface MapperState {
   // Selection
   selectedLayerId: string | null;
 
+  // Bank item preview — which bank item is currently shown on canvas for a given layer
+  previewingBankItemId: string | null; // the bank item currently visible on canvas
+  previewingLayerId: string | null; // which layer it belongs to
+
   // Metadata actions
   setName: (name: string) => void;
   setSlug: (slug: string) => void;
@@ -42,7 +46,11 @@ interface MapperState {
   setAssetBanks: (banks: AssetBank[]) => void;
   addAssetBank: (bank: AssetBank) => void;
   addBankItem: (bankName: string, item: AssetBankItem) => void;
+  updateBankItem: (bankName: string, itemId: string, updates: Partial<AssetBankItem>) => void;
   removeBankItem: (bankName: string, itemId: string) => void;
+
+  // Bank preview
+  setPreviewingBankItem: (layerId: string | null, itemId: string | null) => void;
 
   // Helpers
   getActiveLayers: () => TemplateLayer[];
@@ -70,6 +78,8 @@ export const useMapperStore = create<MapperState>((set, get) => ({
   activeFormatIndex: 0,
   assetBanks: [],
   selectedLayerId: null,
+  previewingBankItemId: null,
+  previewingLayerId: null,
 
   setName: (name) => set({ name }),
   setSlug: (slug) => set({ slug }),
@@ -136,6 +146,15 @@ export const useMapperStore = create<MapperState>((set, get) => ({
       ),
     })),
 
+  updateBankItem: (bankName, itemId, updates) =>
+    set((state) => ({
+      assetBanks: state.assetBanks.map((b) =>
+        b.name === bankName
+          ? { ...b, items: b.items.map((i) => i.id === itemId ? { ...i, ...updates } : i) }
+          : b
+      ),
+    })),
+
   removeBankItem: (bankName, itemId) =>
     set((state) => ({
       assetBanks: state.assetBanks.map((b) =>
@@ -144,6 +163,9 @@ export const useMapperStore = create<MapperState>((set, get) => ({
           : b
       ),
     })),
+
+  setPreviewingBankItem: (layerId, itemId) =>
+    set({ previewingLayerId: layerId, previewingBankItemId: itemId }),
 
   getActiveLayers: () => {
     const state = get();

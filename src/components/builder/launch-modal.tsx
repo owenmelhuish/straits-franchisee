@@ -142,24 +142,24 @@ export function LaunchModal({
     });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="relative mx-4 w-full max-w-lg rounded-xl bg-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="relative mx-4 w-full max-w-lg rounded-3xl bg-white shadow-[0px_12px_32px_rgba(0,0,0,0.08)]">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 z-10 text-muted-foreground hover:text-foreground"
+          className="absolute right-5 top-5 z-10 text-[#A5A5A5] transition-colors hover:text-[#1A1A1A]"
         >
           <X className="h-5 w-5" />
         </button>
 
         {/* Step indicator */}
-        <div className="flex items-center gap-1 px-6 pt-6 pb-2">
+        <div className="flex items-center gap-1.5 px-6 pt-6 pb-2">
           {(["campaign", "ad-details", "review"] as Step[]).map((s, i) => (
             <div
               key={s}
               className={`h-1 flex-1 rounded-full transition-colors ${
                 i <= ["campaign", "ad-details", "review"].indexOf(step)
-                  ? "bg-primary"
-                  : "bg-gray-200"
+                  ? "bg-[#1A1A1A]"
+                  : "bg-[#E0E0E0]"
               }`}
             />
           ))}
@@ -545,7 +545,7 @@ function ReviewStep({
       {adContentRows.length > 0 && (
         <>
           <h3 className="mb-2 text-sm font-semibold">Creative</h3>
-          <div className="mb-5 rounded-lg bg-[#F8F7F7] p-4">
+          <div className="mb-5 rounded-lg bg-[#F4F4F4] p-4">
             <div className="space-y-3">
               {adContentRows.map((row) => (
                 <div
@@ -573,7 +573,7 @@ function ReviewStep({
 
       {/* Ad Copy */}
       <h3 className="mb-2 text-sm font-semibold">Ad Copy</h3>
-      <div className="mb-5 rounded-lg bg-[#F8F7F7] p-4">
+      <div className="mb-5 rounded-lg bg-[#F4F4F4] p-4">
         <div className="space-y-3">
           <DetailRow label="Headline" value={headline || "—"} />
           {caption && (
@@ -593,7 +593,7 @@ function ReviewStep({
 
       {/* Campaign Details */}
       <h3 className="mb-2 text-sm font-semibold">Campaign</h3>
-      <div className="mb-6 rounded-lg bg-[#F8F7F7] p-4">
+      <div className="mb-6 rounded-lg bg-[#F4F4F4] p-4">
         <div className="space-y-3">
           <DetailRow label="Template" value={templateName} />
           <DetailRow label="Format" value={`${formatName} (${formatSize})`} />

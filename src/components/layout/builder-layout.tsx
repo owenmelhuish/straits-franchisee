@@ -6,18 +6,29 @@ interface BuilderLayoutProps {
   left: ReactNode;
   center: ReactNode;
   right: ReactNode;
+  toolbar?: ReactNode;
 }
 
-export function BuilderLayout({ left, center, right }: BuilderLayoutProps) {
+export function BuilderLayout({ left, center, right, toolbar }: BuilderLayoutProps) {
   return (
-    <div className="grid h-screen grid-cols-[280px_1fr_320px] bg-[#F8F7F7]">
-      <aside className="flex flex-col gap-4 overflow-y-auto border-r border-border/50 bg-white p-4">
+    <div className="flex h-screen bg-[#F4F4F4] p-3 gap-3">
+      {/* Left panel */}
+      <aside className="flex w-[280px] shrink-0 flex-col overflow-y-auto rounded-[24px] bg-white p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         {left}
       </aside>
-      <main className="flex items-center justify-center overflow-hidden p-6">
+
+      {/* Center — gray workspace with canvas */}
+      <main className="relative flex flex-1 items-center justify-center overflow-hidden rounded-[24px]" style={{ backgroundColor: "#EBEBEB" }}>
+        {toolbar && (
+          <div className="absolute left-1/2 top-3 z-20 -translate-x-1/2">
+            {toolbar}
+          </div>
+        )}
         {center}
       </main>
-      <aside className="flex flex-col gap-4 overflow-y-auto border-l border-border/50 bg-white p-4">
+
+      {/* Right panel */}
+      <aside className="flex w-[320px] shrink-0 flex-col overflow-y-auto rounded-[24px] bg-white p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         {right}
       </aside>
     </div>

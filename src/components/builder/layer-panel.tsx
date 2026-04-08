@@ -2,7 +2,7 @@
 
 import { Layers, Image, Type, Square } from "lucide-react";
 import { useBuilderStore, selectActiveFormat } from "@/stores/builder-store";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 
 const LAYER_ICONS = {
   image: Image,
@@ -18,32 +18,30 @@ export function LayerPanel() {
   const sortedLayers = [...format.layers].sort((a, b) => b.zIndex - a.zIndex);
 
   return (
-    <Card className="border-0 shadow-none">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-sm font-medium">
-          <Layers className="h-4 w-4" />
-          Layers
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1">
+    <div>
+      <h3 className="mb-3 flex items-center gap-2 text-[14px] font-medium text-[#1A1A1A]">
+        <Layers className="h-4 w-4 text-[#A5A5A5]" />
+        Layers
+      </h3>
+      <div className="space-y-0.5">
         {sortedLayers.map((layer) => {
           const Icon = LAYER_ICONS[layer.type] || Square;
           return (
             <div
               key={layer.id}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground"
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] text-[#666666] transition-colors hover:bg-[#F4F4F4]"
             >
-              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <Icon className="h-3.5 w-3.5 shrink-0 text-[#A5A5A5]" />
               <span className="truncate">{layer.name}</span>
               {layer.editable && (
-                <span className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                <span className="ml-auto rounded-lg bg-[#F4F4F4] px-2 py-0.5 text-[11px] font-medium text-[#666666]">
                   editable
                 </span>
               )}
             </div>
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

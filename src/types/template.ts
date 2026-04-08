@@ -37,6 +37,17 @@ export interface AssetBankItem {
   id: string;
   label: string;
   value: string; // URL for images, text content for text banks
+  // Per-item positioning — allows each variant to have its own size/position
+  left?: number;
+  top?: number;
+  width?: number;
+  height?: number;
+  // Per-item text styling (text banks only)
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  fill?: string;
+  textAlign?: string;
 }
 
 export interface AssetBank {

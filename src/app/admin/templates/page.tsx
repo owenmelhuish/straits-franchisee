@@ -9,21 +9,21 @@ export default async function AdminTemplatesPage() {
   const { data: templates } = await getTemplates(supabase);
 
   return (
-    <div>
+    <div className="rounded-3xl bg-white p-8 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold">Templates</h1>
+        <h1 className="text-[16px] font-semibold text-[#1A1A1A]">Templates</h1>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {/* Create New card */}
         <Link
-          href="/admin/templates/new"
-          className="flex items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/25 bg-white px-5 py-6 text-muted-foreground hover:border-primary hover:text-primary hover:shadow-sm"
+          href="/template-creator"
+          className="flex items-center gap-4 rounded-2xl border-2 border-dashed border-[#E0E0E0] bg-white px-5 py-6 text-[#666666] transition-all hover:border-[#1A1A1A] hover:text-[#1A1A1A] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
         >
           <Plus className="h-5 w-5" />
           <div>
-            <p className="font-medium">Create New Template</p>
-            <p className="text-sm">Upload a PSD file to get started</p>
+            <p className="text-[14px] font-medium">Create New Template</p>
+            <p className="text-[13px]">Upload a PSD file to get started</p>
           </div>
         </Link>
 
@@ -32,11 +32,11 @@ export default async function AdminTemplatesPage() {
           <Link
             key={t.id}
             href={`/admin/templates/${t.id}/edit`}
-            className="flex items-center justify-between rounded-lg border bg-white px-5 py-4 hover:shadow-sm"
+            className="flex items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0px_2px_12px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
           >
             <div>
-              <p className="font-medium">{t.name}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-[14px] font-medium text-[#1A1A1A]">{t.name}</p>
+              <p className="text-[13px] text-[#666666]">
                 {t.slug} &middot; {(t.config as { formats?: unknown[] })?.formats?.length ?? 0} formats
               </p>
             </div>

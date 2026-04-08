@@ -27,35 +27,36 @@ export function DashboardNav({ userName, isAdmin }: DashboardNavProps) {
   }
 
   return (
-    <nav className="flex h-14 items-center justify-between border-b bg-white px-6">
-      <div className="flex items-center gap-6">
-        <Link href="/" className="text-lg font-bold tracking-tight">
+    <nav className="mx-4 mt-4 flex h-12 items-center justify-between rounded-2xl bg-white px-5 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
+      <div className="flex items-center gap-5">
+        <Link href="/" className="text-[15px] font-semibold tracking-tight text-[#1A1A1A]">
           Creative Builder
         </Link>
+        <div className="h-4 w-px bg-[#E0E0E0]" />
         <Link
           href="/dashboard"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
         >
           <LayoutDashboard className="h-4 w-4" />
           Templates
         </Link>
         <Link
           href="/dashboard/history"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
         >
           <History className="h-4 w-4" />
           History
         </Link>
         <Link
           href="/dashboard/analytics"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
         >
           <BarChart3 className="h-4 w-4" />
           Analytics
         </Link>
         <Link
           href="/dashboard/settings"
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
         >
           <Settings className="h-4 w-4" />
           Settings
@@ -63,24 +64,24 @@ export function DashboardNav({ userName, isAdmin }: DashboardNavProps) {
         {isAdmin && (
           <Link
             href="/admin"
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+            className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
           >
             <Shield className="h-4 w-4" />
             Admin
           </Link>
         )}
       </div>
-      <div className="flex items-center gap-3">
-        <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+      <div className="flex items-center gap-2">
+        <span className="rounded-full bg-[#F4F4F4] px-2.5 py-1 text-[11px] font-medium text-[#666666]">
           {isAdmin ? "Admin" : "Franchisee"}
         </span>
-        <span className="text-sm text-muted-foreground">{userName}</span>
-        <Button variant="ghost" size="sm" onClick={handleSwitchRole}>
-          <ArrowLeftRight className="mr-1.5 h-4 w-4" />
-          Switch to {isAdmin ? "Franchisee" : "Admin"}
+        <span className="text-[13px] text-[#666666]">{userName}</span>
+        <Button variant="ghost" size="sm" onClick={handleSwitchRole} className="text-[13px] text-[#666666] hover:text-[#1A1A1A]">
+          <ArrowLeftRight className="mr-1 h-3.5 w-3.5" />
+          Switch
         </Button>
-        <Button variant="ghost" size="sm" onClick={handleLogout}>
-          <LogOut className="mr-1.5 h-4 w-4" />
+        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-[13px] text-[#666666] hover:text-[#1A1A1A]">
+          <LogOut className="mr-1 h-3.5 w-3.5" />
           Sign out
         </Button>
       </div>

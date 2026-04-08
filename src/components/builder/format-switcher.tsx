@@ -12,7 +12,7 @@ export function FormatSwitcher() {
 
   return (
     <div>
-      <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      <p className="mb-2 text-[11px] font-medium text-[#A5A5A5] uppercase tracking-wider">
         Format
       </p>
       <Tabs

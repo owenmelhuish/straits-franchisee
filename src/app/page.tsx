@@ -9,11 +9,11 @@ export default function LandingPage() {
     <div className="relative flex h-screen w-full flex-col items-center overflow-hidden bg-background">
       {/* Text positioned in upper portion */}
       <div className="z-10 flex flex-col items-center pt-[15vh]">
-        <span className="pointer-events-none whitespace-pre-wrap bg-gradient-to-b from-black to-gray-300/80 bg-clip-text text-center text-8xl font-semibold leading-none text-transparent dark:from-white dark:to-slate-900/10">
+        <span className="pointer-events-none whitespace-pre-wrap bg-gradient-to-b from-[#1A1A1A] to-[#A5A5A5]/80 bg-clip-text text-center text-8xl font-semibold leading-none tracking-tight text-transparent dark:from-white dark:to-slate-900/10">
           Create.
         </span>
-        <Link href="/login" className="mt-6">
-          <Button size="lg">Enter</Button>
+        <Link href="/login" className="mt-8">
+          <Button size="lg" className="rounded-xl bg-[#1A1A1A] px-8 text-[13px] font-medium text-white shadow-[0px_4px_20px_rgba(0,0,0,0.04)] hover:bg-[#333333]">Enter</Button>
         </Link>
       </div>
 

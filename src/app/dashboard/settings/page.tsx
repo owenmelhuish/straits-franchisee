@@ -38,27 +38,27 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-6 text-2xl font-bold">Settings</h1>
+      <h1 className="mb-6 text-[16px] font-semibold text-[#1A1A1A]">Settings</h1>
 
       {/* Meta Connection Status */}
       {metaError && (
-        <div className="mb-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
           <div>
-            <p className="font-medium text-red-800">Connection failed</p>
-            <p className="text-sm text-red-600">{metaError}</p>
+            <p className="text-[14px] font-medium text-red-800">Connection failed</p>
+            <p className="text-[13px] text-red-600">{metaError}</p>
           </div>
         </div>
       )}
 
       {metaConnected && (
-        <div className="mb-4 flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-green-200 bg-green-50 p-4">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-500" />
           <div>
-            <p className="font-medium text-green-800">
+            <p className="text-[14px] font-medium text-green-800">
               Meta account connected successfully
             </p>
-            <p className="text-sm text-green-600">
+            <p className="text-[13px] text-green-600">
               You can now publish ads directly from the builder.
             </p>
           </div>
@@ -66,11 +66,11 @@ export default function SettingsPage() {
       )}
 
       {/* Meta Ads Integration Card */}
-      <div className="rounded-xl border bg-white p-6">
+      <div className="rounded-3xl bg-white p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Meta Ads</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h2 className="text-[14px] font-medium text-[#1A1A1A]">Meta Ads</h2>
+            <p className="mt-1 text-[13px] text-[#666666]">
               Connect your Meta ad account to publish creatives directly as ads.
             </p>
           </div>

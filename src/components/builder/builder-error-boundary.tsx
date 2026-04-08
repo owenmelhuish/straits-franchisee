@@ -30,7 +30,7 @@ export class BuilderErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[#F8F7F7] p-8 text-center">
+        <div className="flex h-screen flex-col items-center justify-center gap-4 bg-[#F4F4F4] p-8 text-center">
           <AlertTriangle className="h-12 w-12 text-amber-500" />
           <h2 className="text-xl font-semibold">Something went wrong</h2>
           <p className="max-w-md text-sm text-muted-foreground">

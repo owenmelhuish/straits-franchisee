@@ -12,27 +12,27 @@ export default async function AdminDashboard() {
     ]);
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">Admin Dashboard</h1>
+    <div className="rounded-3xl bg-white p-8 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
+      <h1 className="mb-6 text-[16px] font-semibold text-[#1A1A1A]">Admin Dashboard</h1>
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           label="Templates"
           value={templateCount ?? 0}
-          icon={<FileImage className="h-5 w-5 text-muted-foreground" />}
+          icon={<FileImage className="h-5 w-5 text-[#A5A5A5]" />}
           href="/admin/templates"
         />
         <StatCard
           label="Submissions"
           value={submissionCount ?? 0}
-          icon={<History className="h-5 w-5 text-muted-foreground" />}
+          icon={<History className="h-5 w-5 text-[#A5A5A5]" />}
           href="/admin/submissions"
         />
         <Link
-          href="/admin/templates/new"
-          className="flex items-center gap-3 rounded-xl border bg-white p-6 shadow-sm hover:shadow-md"
+          href="/template-creator"
+          className="flex items-center gap-3 rounded-2xl bg-[#F4F4F4] p-6 transition-all hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
         >
-          <Upload className="h-5 w-5 text-primary" />
-          <span className="font-medium">Create New</span>
+          <Upload className="h-5 w-5 text-[#1A1A1A]" />
+          <span className="text-[14px] font-medium text-[#1A1A1A]">Create New</span>
         </Link>
       </div>
     </div>
@@ -53,12 +53,12 @@ function StatCard({
   return (
     <Link
       href={href}
-      className="flex items-center gap-4 rounded-xl border bg-white p-6 shadow-sm hover:shadow-md"
+      className="flex items-center gap-4 rounded-2xl bg-[#F4F4F4] p-6 transition-all hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
     >
       {icon}
       <div>
-        <p className="text-2xl font-bold">{value}</p>
-        <p className="text-sm text-muted-foreground">{label}</p>
+        <p className="text-2xl font-semibold text-[#1A1A1A]">{value}</p>
+        <p className="text-[13px] text-[#666666]">{label}</p>
       </div>
     </Link>
   );

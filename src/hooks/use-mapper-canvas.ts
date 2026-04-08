@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { Canvas as FabricCanvas, FabricImage, Textbox } from "fabric";
+import { Canvas as FabricCanvas, FabricImage, Textbox, Rect } from "fabric";
 import { TemplateLayer } from "@/types/template";
 import { createEditableFabricObject } from "@/lib/canvas/mapper-helpers";
 import { useMapperStore } from "@/stores/mapper-store";
@@ -19,35 +19,70 @@ export function useMapperCanvas() {
     initRef.current = true;
 
     const format = getActiveFormat();
+    // Canvas is a large fixed size; artboard is centered within it
+    const CANVAS_SIZE = 4000;
+    const padX = Math.round((CANVAS_SIZE - format.width) / 2);
+    const padY = Math.round((CANVAS_SIZE - format.height) / 2);
+
     const canvas = new FabricCanvas(canvasElRef.current, {
-      width: format.width,
-      height: format.height,
+      width: CANVAS_SIZE,
+      height: CANVAS_SIZE,
       selection: true,
-      backgroundColor: "#ffffff",
+      backgroundColor: "transparent",
       preserveObjectStacking: true,
       renderOnAddRemove: true,
+      controlsAboveOverlay: true,
     });
 
-    // Sync object modifications back to store
+    // White artboard background
+    const artboardBg = new Rect({
+      left: padX,
+      top: padY,
+      width: format.width,
+      height: format.height,
+      fill: "#ffffff",
+      selectable: false,
+      evented: false,
+      excludeFromExport: true,
+    });
+    (artboardBg as unknown as { data: Record<string, string> }).data = { role: "artboard-bg" };
+    canvas.add(artboardBg);
+
+    // Clip object pixels to artboard (controls render above this)
+    canvas.clipPath = new Rect({
+      width: format.width,
+      height: format.height,
+      top: padY,
+      left: padX,
+      absolutePositioned: true,
+    });
+
+    // Store offsets for layer positioning
+    (canvas as unknown as { _artboardPad: number })._artboardPad = padX;
+    (canvas as unknown as { _artboardPadY: number })._artboardPadY = padY;
+    (canvas as unknown as { _canvasSize: number })._canvasSize = CANVAS_SIZE;
+
+    // Sync object modifications back to store (subtract PAD to get artboard-relative coords)
     canvas.on("object:modified", (e) => {
       const obj = e.target;
       if (!obj) return;
       const data = (obj as { data?: { layerId: string } }).data;
       if (!data?.layerId) return;
 
+      const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
+      const padY = (canvas as unknown as { _artboardPadY: number })._artboardPadY ?? padX;
       const scaleX = obj.scaleX ?? 1;
       const scaleY = obj.scaleY ?? 1;
 
       updateLayer(data.layerId, {
-        left: Math.round(obj.left ?? 0),
-        top: Math.round(obj.top ?? 0),
+        left: Math.round((obj.left ?? 0) - padX),
+        top: Math.round((obj.top ?? 0) - padY),
         width: Math.round((obj.width ?? 0) * scaleX),
         height: Math.round((obj.height ?? 0) * scaleY),
       });
 
       // Reset scale after applying to width/height
       obj.set({ scaleX: 1, scaleY: 1 });
-      // For images we need to re-apply the scale as actual dimensions
       if (obj instanceof FabricImage) {
         obj.scaleToWidth(Math.round((obj.width ?? 0) * scaleX));
         obj.scaleToHeight(Math.round((obj.height ?? 0) * scaleY));
@@ -88,6 +123,8 @@ export function useMapperCanvas() {
 
       const id = crypto.randomUUID();
       const format = getActiveFormat();
+      const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
+      const padY = (canvas as unknown as { _artboardPadY: number })._artboardPadY ?? padX;
 
       const layer: TemplateLayer = {
         id,
@@ -101,7 +138,7 @@ export function useMapperCanvas() {
         zIndex: canvas.getObjects().length,
       };
 
-      const obj = await createEditableFabricObject(layer);
+      const obj = await createEditableFabricObject({ ...layer, left: padX, top: padY });
       if (obj) {
         canvas.add(obj);
         canvas.requestRenderAll();
@@ -117,6 +154,8 @@ export function useMapperCanvas() {
       if (!canvas) return;
 
       const format = getActiveFormat();
+      const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
+      const padY = (canvas as unknown as { _artboardPadY: number })._artboardPadY ?? padX;
       const id = crypto.randomUUID();
 
       const layer: TemplateLayer = {
@@ -136,7 +175,11 @@ export function useMapperCanvas() {
         zIndex: canvas.getObjects().length,
       };
 
-      const obj = createEditableFabricObjectSync(layer);
+      const obj = createEditableFabricObjectSync({
+        ...layer,
+        left: layer.left + padX,
+        top: layer.top + padY,
+      });
       if (obj) {
         canvas.add(obj);
         canvas.setActiveObject(obj);
@@ -167,12 +210,17 @@ export function useMapperCanvas() {
     const canvas = fabricRef.current;
     if (!canvas) return;
 
-    canvas.clear();
-    canvas.backgroundColor = "#ffffff";
+    const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
+    const padY = (canvas as unknown as { _artboardPadY: number })._artboardPadY ?? padX;
+
+    const toRemove = canvas.getObjects().filter(
+      (o) => (o as unknown as { data?: { role?: string } }).data?.role !== "artboard-bg"
+    );
+    toRemove.forEach((o) => canvas.remove(o));
 
     const sorted = [...layers].sort((a, b) => a.zIndex - b.zIndex);
     for (const layer of sorted) {
-      const obj = await createEditableFabricObject(layer);
+      const obj = await createEditableFabricObject({ ...layer, left: layer.left + padX, top: layer.top + padY });
       if (obj) canvas.add(obj);
     }
     canvas.requestRenderAll();
@@ -181,7 +229,29 @@ export function useMapperCanvas() {
   const resizeCanvas = useCallback((width: number, height: number) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    canvas.setDimensions({ width, height });
+    const CANVAS_SIZE = (canvas as unknown as { _canvasSize: number })._canvasSize ?? 4000;
+    const padX = Math.round((CANVAS_SIZE - width) / 2);
+    const padY = Math.round((CANVAS_SIZE - height) / 2);
+
+    // Update stored offsets
+    (canvas as unknown as { _artboardPad: number })._artboardPad = padX;
+    (canvas as unknown as { _artboardPadY: number })._artboardPadY = padY;
+
+    // Canvas stays the same size; just move the artboard
+    const bgObj = canvas.getObjects().find(
+      (o) => (o as unknown as { data?: { role?: string } }).data?.role === "artboard-bg"
+    );
+    if (bgObj) {
+      bgObj.set({ left: padX, top: padY, width, height });
+    }
+
+    canvas.clipPath = new Rect({
+      width,
+      height,
+      top: padY,
+      left: padX,
+      absolutePositioned: true,
+    });
     canvas.requestRenderAll();
   }, []);
 
@@ -205,8 +275,111 @@ export function useMapperCanvas() {
         if (updates.textAlign !== undefined) obj.set("textAlign", updates.textAlign);
       }
 
-      if (updates.left !== undefined) obj.set("left", updates.left);
-      if (updates.top !== undefined) obj.set("top", updates.top);
+      const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
+      const padY = (canvas as unknown as { _artboardPadY: number })._artboardPadY ?? padX;
+      if (updates.left !== undefined) obj.set("left", updates.left + padX);
+      if (updates.top !== undefined) obj.set("top", updates.top + padY);
+
+      canvas.requestRenderAll();
+    },
+    []
+  );
+
+  // Preview a bank item on the canvas — replaces the image content of a layer
+  // while preserving its Fabric object. When done previewing, call with original layer src.
+  const previewImageOnLayer = useCallback(
+    async (layerId: string, src: string, left: number, top: number, width: number, height: number) => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+
+      const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
+      const padY = (canvas as unknown as { _artboardPadY: number })._artboardPadY ?? padX;
+
+      const objects = canvas.getObjects();
+      const obj = objects.find(
+        (o) => (o as { data?: { layerId: string } }).data?.layerId === layerId
+      );
+
+      if (obj && obj instanceof FabricImage) {
+        // Replace the existing image
+        const idx = objects.indexOf(obj);
+        canvas.remove(obj);
+
+        try {
+          const newImg = await FabricImage.fromURL(src, { crossOrigin: "anonymous" });
+          newImg.set({
+            left: left + padX,
+            top: top + padY,
+            selectable: true,
+            evented: true,
+            hasControls: true,
+            hasBorders: true,
+            cornerColor: "#4f46e5",
+            cornerStrokeColor: "#4f46e5",
+            borderColor: "#6366f1",
+            cornerSize: 8,
+            transparentCorners: false,
+          });
+          newImg.scaleToWidth(width);
+          newImg.scaleToHeight(height);
+          newImg.set("data", { layerId, type: "image" });
+          canvas.insertAt(idx, newImg);
+          canvas.setActiveObject(newImg);
+          canvas.requestRenderAll();
+        } catch (err) {
+          console.error("Failed to preview bank item:", err);
+        }
+      }
+    },
+    []
+  );
+
+  // Get the current position/size of a layer's Fabric object (artboard-relative)
+  const getLayerTransform = useCallback((layerId: string) => {
+    const canvas = fabricRef.current;
+    if (!canvas) return null;
+
+    const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
+    const padY = (canvas as unknown as { _artboardPadY: number })._artboardPadY ?? padX;
+
+    const obj = canvas.getObjects().find(
+      (o) => (o as { data?: { layerId: string } }).data?.layerId === layerId
+    );
+    if (!obj) return null;
+
+    const scaleX = obj.scaleX ?? 1;
+    const scaleY = obj.scaleY ?? 1;
+    return {
+      left: Math.round((obj.left ?? 0) - padX),
+      top: Math.round((obj.top ?? 0) - padY),
+      width: Math.round((obj.width ?? 0) * scaleX),
+      height: Math.round((obj.height ?? 0) * scaleY),
+    };
+  }, []);
+
+  // Preview a text bank item on the canvas — updates text content + styling
+  const previewTextOnLayer = useCallback(
+    (layerId: string, text: string, opts: { left?: number; top?: number; width?: number; fontSize?: number; fontFamily?: string; fontWeight?: string; fill?: string; textAlign?: string }) => {
+      const canvas = fabricRef.current;
+      if (!canvas) return;
+
+      const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
+      const padY = (canvas as unknown as { _artboardPadY: number })._artboardPadY ?? padX;
+
+      const obj = canvas.getObjects().find(
+        (o) => (o as { data?: { layerId: string } }).data?.layerId === layerId
+      );
+      if (!obj || !(obj instanceof Textbox)) return;
+
+      obj.set("text", text);
+      if (opts.fontSize !== undefined) obj.set("fontSize", opts.fontSize);
+      if (opts.fontFamily !== undefined) obj.set("fontFamily", opts.fontFamily);
+      if (opts.fontWeight !== undefined) obj.set("fontWeight", opts.fontWeight);
+      if (opts.fill !== undefined) obj.set("fill", opts.fill);
+      if (opts.textAlign !== undefined) obj.set("textAlign", opts.textAlign);
+      if (opts.left !== undefined) obj.set("left", opts.left + padX);
+      if (opts.top !== undefined) obj.set("top", opts.top + padY);
+      if (opts.width !== undefined) obj.set("width", opts.width);
 
       canvas.requestRenderAll();
     },
@@ -222,6 +395,9 @@ export function useMapperCanvas() {
     loadFormatLayers,
     resizeCanvas,
     updateCanvasObject,
+    previewImageOnLayer,
+    previewTextOnLayer,
+    getLayerTransform,
   };
 }
 

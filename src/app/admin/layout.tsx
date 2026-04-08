@@ -15,9 +15,9 @@ export default async function AdminLayout({
   if (role !== "admin") redirect("/dashboard");
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="flex w-56 flex-col border-r bg-white px-4 py-6">
-        <h2 className="mb-6 text-lg font-bold tracking-tight">Admin</h2>
+    <div className="flex min-h-screen bg-[#F4F4F4] p-3 gap-3">
+      <aside className="flex w-56 shrink-0 flex-col rounded-3xl bg-white px-4 py-6 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
+        <h2 className="mb-6 text-[16px] font-semibold tracking-tight text-[#1A1A1A]">Admin</h2>
         <nav className="space-y-1">
           <SideLink href="/admin" icon={<LayoutDashboard className="h-4 w-4" />}>
             Dashboard
@@ -35,13 +35,13 @@ export default async function AdminLayout({
         <div className="mt-auto">
           <Link
             href="/dashboard"
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
           >
             &larr; Back to app
           </Link>
         </div>
       </aside>
-      <main className="flex-1 bg-[#F8F7F7] p-8">{children}</main>
+      <main className="flex-1 overflow-auto p-4">{children}</main>
     </div>
   );
 }
@@ -58,7 +58,7 @@ function SideLink({
   return (
     <Link
       href={href}
-      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
+      className="flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] text-[#666666] transition-colors hover:bg-[#F4F4F4] hover:text-[#1A1A1A]"
     >
       {icon}
       {children}

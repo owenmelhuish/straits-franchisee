@@ -31,7 +31,6 @@ export function MapperShell({ initialFormat }: MapperShellProps) {
   const formats = useMapperStore((s) => s.formats);
   const initialized = useRef(false);
 
-  // Initialize store with the single selected format
   useEffect(() => {
     if (initialFormat && !initialized.current) {
       initialized.current = true;
@@ -68,9 +67,9 @@ export function MapperShell({ initialFormat }: MapperShellProps) {
   );
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-xl border bg-white shadow-sm">
-      {/* Left Panel */}
-      <div className="w-72 shrink-0">
+    <div className="flex h-full gap-3">
+      {/* Left panel */}
+      <div className="w-[280px] shrink-0 overflow-y-auto rounded-[24px] bg-white shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         <AssetPanel
           onAddImage={addImageLayer}
           onAddText={addTextBox}
@@ -78,16 +77,16 @@ export function MapperShell({ initialFormat }: MapperShellProps) {
         />
       </div>
 
-      {/* Center Panel */}
-      <div className="flex-1">
+      {/* Center — canvas workspace, no white wrapper */}
+      <div className="flex-1 overflow-hidden rounded-[24px]" style={{ backgroundColor: "#EBEBEB" }}>
         <InteractiveCanvas
           canvasRef={canvasRef}
           onFormatChange={handleFormatChange}
         />
       </div>
 
-      {/* Right Panel */}
-      <div className="w-80 shrink-0">
+      {/* Right panel */}
+      <div className="w-[320px] shrink-0 overflow-y-auto rounded-[24px] bg-white shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         <PropertiesPanel onLayerUpdate={handleLayerUpdate} />
       </div>
     </div>

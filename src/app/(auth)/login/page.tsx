@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { Shield, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,36 +13,38 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="rounded-xl border bg-white p-8 shadow-sm">
-      <h1 className="mb-1 text-2xl font-bold">Creative Builder</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
+    <div className="rounded-3xl bg-white p-8 shadow-[0px_12px_32px_rgba(0,0,0,0.08)]">
+      <h1 className="mb-1 text-[16px] font-semibold text-[#1A1A1A]">Creative Builder</h1>
+      <p className="mb-6 text-[13px] text-[#666666]">
         Select a role to continue
       </p>
 
       <div className="space-y-3">
-        <Button
-          variant="outline"
-          className="flex w-full items-center justify-start gap-3 h-14 text-left"
+        <button
+          className="flex w-full items-center gap-3 rounded-2xl border border-[#E0E0E0] bg-white px-4 py-4 text-left transition-all hover:border-[#D1D1D1] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
           onClick={() => selectRole("admin")}
         >
-          <Shield className="h-5 w-5 text-primary" />
-          <div>
-            <div className="font-medium">Admin</div>
-            <div className="text-xs text-muted-foreground">Manage templates &amp; submissions</div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F4F4]">
+            <Shield className="h-5 w-5 text-[#1A1A1A]" />
           </div>
-        </Button>
+          <div>
+            <div className="text-[14px] font-medium text-[#1A1A1A]">Admin</div>
+            <div className="text-[13px] text-[#666666]">Manage templates &amp; submissions</div>
+          </div>
+        </button>
 
-        <Button
-          variant="outline"
-          className="flex w-full items-center justify-start gap-3 h-14 text-left"
+        <button
+          className="flex w-full items-center gap-3 rounded-2xl border border-[#E0E0E0] bg-white px-4 py-4 text-left transition-all hover:border-[#D1D1D1] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
           onClick={() => selectRole("franchisee")}
         >
-          <User className="h-5 w-5 text-primary" />
-          <div>
-            <div className="font-medium">Franchisee</div>
-            <div className="text-xs text-muted-foreground">Build creatives from templates</div>
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F4F4F4]">
+            <User className="h-5 w-5 text-[#1A1A1A]" />
           </div>
-        </Button>
+          <div>
+            <div className="text-[14px] font-medium text-[#1A1A1A]">Franchisee</div>
+            <div className="text-[13px] text-[#666666]">Build creatives from templates</div>
+          </div>
+        </button>
       </div>
     </div>
   );

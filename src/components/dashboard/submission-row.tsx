@@ -25,11 +25,11 @@ export function SubmissionRow({ submission }: SubmissionRowProps) {
   const date = new Date(submission.created_at);
 
   return (
-    <div className="flex items-center justify-between rounded-lg border bg-white px-5 py-3">
+    <div className="flex items-center justify-between rounded-2xl bg-white px-5 py-3.5 shadow-[0px_2px_12px_rgba(0,0,0,0.04)]">
       <div className="flex items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <p className="font-medium">
+            <p className="text-[14px] font-medium text-[#1A1A1A]">
               {submission.templates?.name ?? "Deleted template"}
             </p>
             {submission.meta_status && (
@@ -43,7 +43,7 @@ export function SubmissionRow({ submission }: SubmissionRowProps) {
               </span>
             )}
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[13px] text-[#666666]">
             {submission.format_name} &middot;{" "}
             {date.toLocaleDateString()}{" "}
             {date.toLocaleTimeString([], {

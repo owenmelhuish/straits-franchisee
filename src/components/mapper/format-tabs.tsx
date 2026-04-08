@@ -16,16 +16,16 @@ export function FormatTabs({ onFormatChange }: FormatTabsProps) {
   }
 
   return (
-    <div className="flex gap-1 rounded-lg bg-muted p-1">
+    <div className="flex gap-0.5 rounded-xl bg-[#F4F4F4] p-1">
       {formats.map((format, i) => (
         <button
           key={format.name}
           onClick={() => handleSwitch(i)}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+            "rounded-lg px-3 py-1.5 text-[13px] font-medium transition-all",
             i === activeFormatIndex
-              ? "bg-white text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+              ? "bg-white text-[#1A1A1A] shadow-[0px_2px_8px_rgba(0,0,0,0.06)]"
+              : "text-[#A5A5A5] hover:text-[#666666]"
           )}
         >
           {format.label}

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { Open_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const openSans = Open_Sans({
-  variable: "--font-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -20,7 +20,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${openSans.className} antialiased`}>
+      <body className={`${inter.className} antialiased`}>
         {children}
         <Toaster position="top-center" richColors />
       </body>
