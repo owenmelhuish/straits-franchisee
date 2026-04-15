@@ -74,18 +74,34 @@ export function useMapperCanvas() {
       const scaleX = obj.scaleX ?? 1;
       const scaleY = obj.scaleY ?? 1;
 
-      updateLayer(data.layerId, {
+      const transform = {
         left: Math.round((obj.left ?? 0) - padX),
         top: Math.round((obj.top ?? 0) - padY),
         width: Math.round((obj.width ?? 0) * scaleX),
         height: Math.round((obj.height ?? 0) * scaleY),
-      });
+      };
+
+      // If a bank item is being previewed on this layer, write the transform
+      // to the bank item rather than the layer's default position.
+      const store = useMapperStore.getState();
+      const isPreviewingItem =
+        store.previewingLayerId === data.layerId && store.previewingBankItemId;
+      if (isPreviewingItem) {
+        const layer = store.formats[store.activeFormatIndex]?.layers.find(
+          (l) => l.id === data.layerId,
+        );
+        if (layer?.linkedBank) {
+          store.updateBankItem(layer.linkedBank, store.previewingBankItemId!, transform);
+        }
+      } else {
+        updateLayer(data.layerId, transform);
+      }
 
       // Reset scale after applying to width/height
       obj.set({ scaleX: 1, scaleY: 1 });
       if (obj instanceof FabricImage) {
-        obj.scaleToWidth(Math.round((obj.width ?? 0) * scaleX));
-        obj.scaleToHeight(Math.round((obj.height ?? 0) * scaleY));
+        obj.scaleToWidth(transform.width);
+        obj.scaleToHeight(transform.height);
       }
     });
 
@@ -386,6 +402,35 @@ export function useMapperCanvas() {
     []
   );
 
+  // Export the artboard region as a PNG data URL (for thumbnail capture).
+  const captureArtboard = useCallback((): string | null => {
+    const canvas = fabricRef.current;
+    if (!canvas) return null;
+    const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
+    const padY = (canvas as unknown as { _artboardPadY: number })._artboardPadY ?? padX;
+    const format = useMapperStore.getState().getActiveFormat();
+    if (!format) return null;
+
+    const active = canvas.getActiveObject();
+    if (active) canvas.discardActiveObject();
+    canvas.requestRenderAll();
+
+    const url = canvas.toDataURL({
+      format: "png",
+      left: padX,
+      top: padY,
+      width: format.width,
+      height: format.height,
+      multiplier: 1,
+    });
+
+    if (active) {
+      canvas.setActiveObject(active);
+      canvas.requestRenderAll();
+    }
+    return url;
+  }, []);
+
   return {
     canvasRef: canvasElRef,
     fabricCanvas: fabricRef,
@@ -398,6 +443,7 @@ export function useMapperCanvas() {
     previewImageOnLayer,
     previewTextOnLayer,
     getLayerTransform,
+    captureArtboard,
   };
 }
 

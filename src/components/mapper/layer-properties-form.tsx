@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMapperStore } from "@/stores/mapper-store";
 import { TemplateLayer } from "@/types/template";
 import { Plus, Trash2, Upload } from "lucide-react";
@@ -36,10 +36,20 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
   const [showCreateBank, setShowCreateBank] = useState(false);
   const [newBankName, setNewBankName] = useState("");
   const [newItemValue, setNewItemValue] = useState("");
+  // Tracks user intent to be in bank mode even before a bank exists.
+  // Resets when the selected layer changes.
+  const [bankModeRequested, setBankModeRequested] = useState(false);
+  useEffect(() => {
+    setBankModeRequested(false);
+    setShowCreateBank(false);
+  }, [layer.id]);
 
   const compatibleBanks = assetBanks.filter((b) =>
     layer.type === "image" ? b.type === "image" : b.type === "text"
   );
+
+  // For text layers: bank mode = either persisted (linkedBank set) or transiently requested
+  const textInBankMode = !!layer.linkedBank || bankModeRequested;
 
   const linkedBank = layer.linkedBank
     ? assetBanks.find((b) => b.name === layer.linkedBank)
@@ -56,7 +66,15 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
       name: bankName,
       type: bankType as "image" | "text",
       items: defaultValue
-        ? [{ id: `item-${Date.now()}`, label: "Default", value: defaultValue }]
+        ? [{
+            id: `item-${Date.now()}`,
+            label: "Default",
+            value: defaultValue,
+            left: layer.left,
+            top: layer.top,
+            width: layer.width,
+            height: layer.height,
+          }]
         : [],
     };
 
@@ -253,8 +271,55 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
         </button>
       </div>
 
-      {/* Linked bank — shown when editable */}
-      {layer.editable && (
+      {/* Text mode toggle: free-form vs bank (text only).
+          We use linkedBank presence as the persistent signal, but track a
+          transient "bank mode requested" so the user can toggle to bank mode
+          and create a new bank before any exist. */}
+      {layer.editable && layer.type === "text" && (
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            Input mode
+          </label>
+          <div className="flex gap-1 rounded-lg bg-muted/40 p-1">
+            <button
+              onClick={() => {
+                setBankModeRequested(false);
+                onUpdate(layer.id, { linkedBank: undefined });
+              }}
+              className={`flex-1 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                !textInBankMode
+                  ? "bg-white text-[#1A1A1A] shadow-sm"
+                  : "text-muted-foreground hover:text-[#1A1A1A]"
+              }`}
+            >
+              Free form
+            </button>
+            <button
+              onClick={() => {
+                setBankModeRequested(true);
+                if (compatibleBanks[0]) {
+                  onUpdate(layer.id, { linkedBank: compatibleBanks[0].name });
+                }
+              }}
+              className={`flex-1 rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                textInBankMode
+                  ? "bg-white text-[#1A1A1A] shadow-sm"
+                  : "text-muted-foreground hover:text-[#1A1A1A]"
+              }`}
+            >
+              From bank
+            </button>
+          </div>
+          {!textInBankMode && (
+            <p className="mt-1.5 text-[10px] text-muted-foreground">
+              Franchisees type their own text, using the styling you set above.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Linked bank — shown when editable. For text layers in free-form mode, the bank UI is hidden. */}
+      {layer.editable && !(layer.type === "text" && !textInBankMode) && (
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">

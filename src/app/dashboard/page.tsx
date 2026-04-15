@@ -33,7 +33,7 @@ export default async function DashboardPage() {
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {isAdmin && <CreateNewCard />}
           {dbTemplates.map((template) => (
-            <TemplateCard key={template.id} template={template} />
+            <TemplateCard key={template.id} template={template} isAdmin={isAdmin} />
           ))}
         </div>
       ) : (

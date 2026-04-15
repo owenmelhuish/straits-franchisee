@@ -99,10 +99,15 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
     return () => obs.disconnect();
   }, [fitToView]);
 
-  // Space key for pan mode
+  // Space key for pan mode — but only when focus isn't in an editable input
   useEffect(() => {
+    const isEditable = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+    };
     const down = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !e.repeat) { e.preventDefault(); spaceHeld.current = true; if (containerRef.current) containerRef.current.style.cursor = "grab"; }
+      if (e.code === "Space" && !e.repeat && !isEditable(e.target)) { e.preventDefault(); spaceHeld.current = true; if (containerRef.current) containerRef.current.style.cursor = "grab"; }
     };
     const up = (e: KeyboardEvent) => {
       if (e.code === "Space") { spaceHeld.current = false; if (containerRef.current && !isPanning.current) containerRef.current.style.cursor = ""; }
@@ -162,12 +167,17 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
     setShowLaunchModal(false);
   }, [exportPng, getBlob, format, userId, layerSelections, setExporting]);
 
-  // Editable layers & banks for right panel
-  const editableLayers = (format?.layers ?? []).filter((l) => l.editable && l.linkedBank);
+  // Editable layers for right panel: anything marked editable.
+  // Text layers without a linkedBank are free-form (franchisee types their own).
+  const editableLayers = (format?.layers ?? []).filter(
+    (l) => l.editable && (l.linkedBank || l.type === "text"),
+  );
   const sortedLayers = [...(format?.layers ?? [])].sort((a, b) => b.zIndex - a.zIndex);
 
-  // Launch modal data
-  const editableLayersMeta = editableLayers.map((l) => ({ id: l.id, name: l.name, linkedBank: l.linkedBank }));
+  // Launch modal data — only bank-backed layers carry a linkedBank
+  const editableLayersMeta = editableLayers
+    .filter((l) => l.linkedBank)
+    .map((l) => ({ id: l.id, name: l.name, linkedBank: l.linkedBank }));
   const bankMeta = template.assetBanks.map((b) => ({ name: b.name, type: b.type }));
 
   return (
@@ -281,10 +291,28 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
         {/* Editable layer dropdowns */}
         <div className="space-y-5 flex-1">
           {editableLayers.map((layer) => {
+            // Free-form text (no linked bank) — render a textarea
+            if (layer.type === "text" && !layer.linkedBank) {
+              const currentValue = layerSelections[layer.id] ?? layer.text ?? "";
+              return (
+                <div key={layer.id}>
+                  <label className="mb-1.5 block text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5]">
+                    {layer.name}
+                  </label>
+                  <textarea
+                    value={currentValue}
+                    onChange={(e) => setLayerSelection(layer.id, e.target.value)}
+                    rows={2}
+                    placeholder="Type your text…"
+                    className="w-full resize-none rounded-xl border border-[#E0E0E0] bg-white px-3 py-2.5 text-[13px] text-[#1A1A1A] focus:border-[#D1D1D1] focus:outline-none"
+                  />
+                </div>
+              );
+            }
+
             const bank = template.assetBanks.find((b) => b.name === layer.linkedBank);
             if (!bank) return null;
             const currentValue = layerSelections[layer.id] || (layer.type === "image" ? layer.src : layer.text) || "";
-            const currentItem = bank.items.find((it) => it.value === currentValue);
 
             return (
               <div key={layer.id}>

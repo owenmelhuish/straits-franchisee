@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTemplates } from "@/lib/supabase/db";
-import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, Pencil } from "lucide-react";
 
 export default async function AdminTemplatesPage() {
   const supabase = createAdminClient();
@@ -31,8 +30,8 @@ export default async function AdminTemplatesPage() {
         {templates.map((t) => (
           <Link
             key={t.id}
-            href={`/admin/templates/${t.id}/edit`}
-            className="flex items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0px_2px_12px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
+            href={`/template-creator?id=${t.id}`}
+            className="group flex items-center justify-between rounded-2xl bg-white px-5 py-4 shadow-[0px_2px_12px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
           >
             <div>
               <p className="text-[14px] font-medium text-[#1A1A1A]">{t.name}</p>
@@ -40,7 +39,12 @@ export default async function AdminTemplatesPage() {
                 {t.slug} &middot; {(t.config as { formats?: unknown[] })?.formats?.length ?? 0} formats
               </p>
             </div>
-            <StatusBadge status={t.status} />
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-xl border border-[#E0E0E0] bg-white px-3 py-1.5 text-[12px] font-medium text-[#1A1A1A] opacity-0 transition-opacity group-hover:opacity-100">
+                <Pencil className="h-3.5 w-3.5" /> Edit
+              </span>
+              <StatusBadge status={t.status} />
+            </div>
           </Link>
         ))}
       </div>

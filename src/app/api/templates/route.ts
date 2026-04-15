@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
   const devUser = await getDevUser();
 
   if (!devUser) {

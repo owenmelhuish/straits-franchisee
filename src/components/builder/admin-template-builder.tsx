@@ -7,10 +7,16 @@ import { useMapperStore } from "@/stores/mapper-store";
 import { LayerPropertiesForm } from "@/components/mapper/layer-properties-form";
 import { ImageBankEditor } from "@/components/mapper/image-bank-editor";
 import { TextBankEditor } from "@/components/mapper/text-bank-editor";
-import { BankEditor } from "@/components/admin/bank-editor";
-import { TemplateLayer, AssetBankItem } from "@/types/template";
+import {
+  TemplateValidation,
+  computeValidationIssues,
+  hasBlockingErrors,
+} from "@/components/admin/template-validation";
+import { TemplateLayer, AssetBankItem, TemplateConfig, TemplateFormat } from "@/types/template";
+import { TemplateRow, templateRowToConfig } from "@/types/database";
 import { STANDARD_FORMATS } from "@/lib/constants";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import {
   ChevronLeft,
   Upload,
@@ -23,16 +29,18 @@ import {
   Plus,
   Minus,
   Maximize,
+  Camera,
+  Archive,
 } from "lucide-react";
 
-/* ─── Format selection screen ─── */
+/* ─── Format selection screen (new template only) ─── */
 function FormatPicker({ onSelect }: { onSelect: (fmt: typeof STANDARD_FORMATS[number]) => void }) {
   return (
     <div className="flex h-screen items-center justify-center" style={{ backgroundColor: "#F4F4F4", fontFamily: "Inter, system-ui, sans-serif" }}>
       <div className="w-full max-w-3xl rounded-[24px] bg-white p-10 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         <div className="mb-6">
-          <Link href="/admin/templates" className="inline-flex items-center gap-1 text-[13px] text-[#A5A5A5] hover:text-[#1A1A1A] transition-colors">
-            <ChevronLeft className="h-3.5 w-3.5" /> Back to templates
+          <Link href="/dashboard" className="inline-flex items-center gap-1 text-[13px] text-[#A5A5A5] hover:text-[#1A1A1A] transition-colors">
+            <ChevronLeft className="h-3.5 w-3.5" /> Back to dashboard
           </Link>
         </div>
         <h1 className="mb-2 text-center text-[16px] font-semibold text-[#1A1A1A]">Create New Template</h1>
@@ -61,40 +69,155 @@ function FormatPicker({ onSelect }: { onSelect: (fmt: typeof STANDARD_FORMATS[nu
   );
 }
 
-/* ─── Main builder ─── */
-export function AdminTemplateBuilder() {
+/* ─── Top-level — picker for new, fetch+hydrate for edit ─── */
+export function AdminTemplateBuilder({ templateId }: { templateId?: string } = {}) {
   const [selectedFormat, setSelectedFormat] = useState<typeof STANDARD_FORMATS[number] | null>(null);
+  const [editRow, setEditRow] = useState<TemplateRow | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Edit mode: fetch template
+  useEffect(() => {
+    if (!templateId) return;
+    let cancelled = false;
+    fetch(`/api/templates/${templateId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to load template");
+        return res.json();
+      })
+      .then((data: TemplateRow) => {
+        if (!cancelled) setEditRow(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load template");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [templateId]);
+
+  if (templateId) {
+    if (loadError) {
+      return (
+        <div className="flex h-screen items-center justify-center" style={{ backgroundColor: "#F4F4F4" }}>
+          <div className="rounded-2xl bg-white p-6 text-[13px] text-red-500 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
+            {loadError}
+          </div>
+        </div>
+      );
+    }
+    if (!editRow) {
+      return (
+        <div className="flex h-screen items-center justify-center" style={{ backgroundColor: "#F4F4F4" }}>
+          <p className="text-[13px] text-[#A5A5A5]">Loading template…</p>
+        </div>
+      );
+    }
+    return <TemplateBuilder mode="edit" editRow={editRow} />;
+  }
 
   if (!selectedFormat) return <FormatPicker onSelect={setSelectedFormat} />;
-
-  return <TemplateBuilder format={selectedFormat} />;
+  return <TemplateBuilder mode="create" initialFormat={selectedFormat} />;
 }
 
-function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FORMATS[number] }) {
+/* ─── Main builder ─── */
+type BuilderProps =
+  | { mode: "create"; initialFormat: typeof STANDARD_FORMATS[number] }
+  | { mode: "edit"; editRow: TemplateRow };
+
+function isEditMode(p: BuilderProps): p is Extract<BuilderProps, { mode: "edit" }> {
+  return p.mode === "edit";
+}
+
+function TemplateBuilder(props: BuilderProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Mapper canvas hook
-  const { canvasRef, addImageLayer, addTextBox, removeLayer, resizeCanvas, updateCanvasObject, previewImageOnLayer, previewTextOnLayer, getLayerTransform } = useMapperCanvas();
+  const {
+    canvasRef,
+    addImageLayer,
+    addTextBox,
+    removeLayer,
+    resizeCanvas,
+    loadFormatLayers,
+    updateCanvasObject,
+    previewImageOnLayer,
+    previewTextOnLayer,
+    getLayerTransform,
+    captureArtboard,
+  } = useMapperCanvas();
 
   // Store
-  const { name, slug, description, setName, setSlug, setDescription, assetBanks, setAssetBanks,
-    formats, getActiveLayers, getSelectedLayer, selectedLayerId, setSelectedLayerId,
-    updateLayer, reorderLayers } = useMapperStore();
+  const {
+    name, slug, description, thumbnail,
+    setName, setSlug, setDescription, setThumbnail,
+    formats, activeFormatIndex, setActiveFormatIndex,
+    getActiveLayers, getSelectedLayer, selectedLayerId, setSelectedLayerId,
+    updateLayer, reorderLayers,
+  } = useMapperStore();
 
-  const initialized = useRef(false);
+  // Hydrate store + canvas on mount. Intentionally NOT guarded by a ref:
+  // React StrictMode double-mounts, which disposes and re-creates the Fabric
+  // canvas. We need to re-load layers onto the fresh canvas each time.
   useEffect(() => {
-    if (!initialized.current) {
-      initialized.current = true;
+    if (props.mode === "create") {
+      const f = props.initialFormat;
       useMapperStore.setState({
-        formats: [{ name: initialFormat.name, label: initialFormat.label, width: initialFormat.width, height: initialFormat.height, layers: [] }],
-        activeFormatIndex: 0, name: "", slug: "", description: "", assetBanks: [], selectedLayerId: null,
+        formats: [{ name: f.name, label: f.label, width: f.width, height: f.height, layers: [] }],
+        activeFormatIndex: 0,
+        name: "", slug: "", description: "", thumbnail: "",
+        assetBanks: [], selectedLayerId: null,
+        previewingBankItemId: null, previewingLayerId: null,
       });
-      resizeCanvas(initialFormat.width, initialFormat.height);
+      resizeCanvas(f.width, f.height);
+      return;
     }
-  }, [initialFormat, resizeCanvas]);
 
-  const activeFormat = formats[0] ?? { width: initialFormat.width, height: initialFormat.height, layers: [] };
+    // Edit mode
+    const cfg: TemplateConfig = templateRowToConfig(props.editRow);
+    // Migrate banks without IDs (parity with old edit page)
+    const banks = cfg.assetBanks.map((b) => ({ ...b, id: b.id || crypto.randomUUID() }));
+    useMapperStore.setState({
+      name: cfg.name,
+      slug: cfg.slug,
+      description: cfg.description,
+      thumbnail: cfg.thumbnail || "",
+      formats: cfg.formats,
+      activeFormatIndex: 0,
+      assetBanks: banks,
+      selectedLayerId: null,
+      previewingBankItemId: null,
+      previewingLayerId: null,
+    });
+    const first = cfg.formats[0];
+    if (first) {
+      resizeCanvas(first.width, first.height);
+      // Load layers after resize completes synchronously
+      void loadFormatLayers(first.layers);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Switch format: resize + reload layers when activeFormatIndex changes (skip first run)
+  const lastFormatIdx = useRef<number | null>(null);
+  useEffect(() => {
+    if (lastFormatIdx.current === null) {
+      lastFormatIdx.current = activeFormatIndex;
+      return;
+    }
+    if (lastFormatIdx.current === activeFormatIndex) return;
+    lastFormatIdx.current = activeFormatIndex;
+
+    const fmt = formats[activeFormatIndex];
+    if (!fmt) return;
+    resizeCanvas(fmt.width, fmt.height);
+    void loadFormatLayers(fmt.layers);
+    setSelectedLayerId(null);
+  }, [activeFormatIndex, formats, resizeCanvas, loadFormatLayers, setSelectedLayerId]);
+
+  const activeFormat: TemplateFormat = formats[activeFormatIndex] ?? {
+    name: "", label: "", width: 1080, height: 1080, layers: [],
+  };
   const layers = getActiveLayers();
   const selectedLayer = getSelectedLayer();
 
@@ -125,7 +248,12 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
   }, [fitToView]);
 
   useEffect(() => {
-    const d = (e: KeyboardEvent) => { if (e.code === "Space" && !e.repeat) { e.preventDefault(); spaceHeld.current = true; if (containerRef.current) containerRef.current.style.cursor = "grab"; } };
+    const isEditable = (el: EventTarget | null) => {
+      if (!(el instanceof HTMLElement)) return false;
+      const tag = el.tagName;
+      return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+    };
+    const d = (e: KeyboardEvent) => { if (e.code === "Space" && !e.repeat && !isEditable(e.target)) { e.preventDefault(); spaceHeld.current = true; if (containerRef.current) containerRef.current.style.cursor = "grab"; } };
     const u = (e: KeyboardEvent) => { if (e.code === "Space") { spaceHeld.current = false; if (containerRef.current && !isPanning.current) containerRef.current.style.cursor = ""; } };
     window.addEventListener("keydown", d); window.addEventListener("keyup", u);
     return () => { window.removeEventListener("keydown", d); window.removeEventListener("keyup", u); };
@@ -154,13 +282,11 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [addImageLayer]);
 
-  // Layer update bridging store ↔ canvas
   function handleLayerUpdate(id: string, updates: Partial<TemplateLayer>) {
     updateLayer(id, updates);
     updateCanvasObject(id, updates);
   }
 
-  // Bank item preview — load a bank image onto the canvas at its stored position
   const handlePreviewBankItem = useCallback((item: AssetBankItem) => {
     if (!selectedLayer) return;
     previewImageOnLayer(
@@ -173,7 +299,6 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
     );
   }, [selectedLayer, previewImageOnLayer]);
 
-  // Revert to the layer's original content
   const handleRevertPreview = useCallback(() => {
     if (!selectedLayer) return;
     if (selectedLayer.type === "image" && selectedLayer.src) {
@@ -187,7 +312,6 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
     }
   }, [selectedLayer, previewImageOnLayer, previewTextOnLayer]);
 
-  // Preview a text bank item on the canvas
   const handlePreviewTextBankItem = useCallback((item: AssetBankItem) => {
     if (!selectedLayer) return;
     previewTextOnLayer(selectedLayer.id, item.value, {
@@ -202,7 +326,6 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
     });
   }, [selectedLayer, previewTextOnLayer]);
 
-  // Save current canvas transform back to the previewing bank item
   const handleSaveBankItemTransform = useCallback(() => {
     const store = useMapperStore.getState();
     if (!store.previewingLayerId || !store.previewingBankItemId) return;
@@ -212,24 +335,105 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
     if (!layer?.linkedBank) return;
     store.updateBankItem(layer.linkedBank, store.previewingBankItemId, transform);
   }, [getLayerTransform]);
+  void handleSaveBankItemTransform;
 
-  // Save
+  // Save / publish / archive / thumbnail
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  async function handleSave(status: "draft" | "active") {
-    if (!name.trim() || !slug.trim()) { setError("Name and slug are required"); return; }
-    setSaving(true); setError(null);
+  const [thumbBusy, setThumbBusy] = useState(false);
+
+  const config: TemplateConfig = {
+    id: isEditMode(props) ? props.editRow.id : "",
+    name, slug, description, thumbnail,
+    formats, assetBanks: useMapperStore.getState().assetBanks,
+  };
+  const validationIssues = computeValidationIssues(config);
+  const hasErrors = hasBlockingErrors(validationIssues);
+
+  async function handleGenerateThumbnail() {
+    setThumbBusy(true);
+    setError(null);
     try {
-      const config = useMapperStore.getState().toTemplateConfig();
-      const res = await fetch("/api/templates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: config.name, slug: config.slug, description: config.description, status, config: { formats: config.formats, assetBanks: config.assetBanks } }) });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || "Failed"); }
-      const t = await res.json();
-      router.push(`/admin/templates/${t.id}/edit`);
-    } catch (err) { setError(err instanceof Error ? err.message : "Save failed"); }
-    finally { setSaving(false); }
+      const dataUrl = captureArtboard();
+      if (!dataUrl) throw new Error("Could not capture canvas");
+      const blob = await (await fetch(dataUrl)).blob();
+      const safeSlug = slug || "template";
+      const formData = new FormData();
+      formData.append("file", blob, `${safeSlug}-thumbnail.png`);
+      formData.append("bucket", "templates");
+      formData.append("path", `thumbnails/${safeSlug}-${Date.now()}.png`);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Thumbnail upload failed");
+      const { url } = await res.json();
+      setThumbnail(url);
+      toast.success("Thumbnail captured");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Thumbnail failed";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setThumbBusy(false);
+    }
+  }
+
+  async function handleSave(status: "draft" | "active" | "archived") {
+    if (!name.trim() || !slug.trim()) {
+      setError("Name and slug are required");
+      toast.error("Name and slug are required");
+      return;
+    }
+    if (status === "active" && hasErrors) {
+      setError("Fix validation errors before publishing");
+      toast.error("Fix validation errors before publishing");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const cfg = useMapperStore.getState().toTemplateConfig();
+      const body = {
+        name: cfg.name,
+        slug: cfg.slug,
+        description: cfg.description,
+        thumbnail_url: cfg.thumbnail || undefined,
+        status,
+        config: { formats: cfg.formats, assetBanks: cfg.assetBanks },
+      };
+      const isEdit = props.mode === "edit";
+      const url = isEdit ? `/api/templates/${props.editRow.id}` : "/api/templates";
+      const method = isEdit ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Save failed (${res.status})`);
+      }
+      const updated: TemplateRow = await res.json();
+
+      const verb =
+        status === "active" ? "Published" :
+        status === "archived" ? "Archived" :
+        "Draft saved";
+      toast.success(verb);
+
+      if (!isEdit) {
+        router.push(`/template-creator?id=${updated.id}`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Save failed";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const LAYER_ICONS: Record<string, typeof ImageIcon> = { image: ImageIcon, text: TypeIcon, rect: Square };
+  const isEdit = props.mode === "edit";
+  const currentStatus = isEdit ? props.editRow.status : "draft";
 
   return (
     <div className="h-screen w-screen overflow-hidden" style={{ backgroundColor: "#F4F4F4", fontFamily: "Inter, system-ui, sans-serif" }}>
@@ -237,18 +441,48 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
       {/* ── TOP TOOLBAR ── */}
       <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 30 }}
         className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-[0px_4px_20px_rgba(0,0,0,0.06)]">
-        <span className="px-2 text-[13px] font-medium text-[#1A1A1A]">{initialFormat.label}</span>
+        {formats.length > 1 ? (
+          <div className="flex items-center gap-1">
+            {formats.map((f, i) => (
+              <button
+                key={f.name + i}
+                onClick={() => setActiveFormatIndex(i)}
+                className={`rounded-xl px-2.5 py-1 text-[12px] font-medium transition-colors ${
+                  i === activeFormatIndex
+                    ? "bg-[#1A1A1A] text-white"
+                    : "text-[#666] hover:bg-[#F4F4F4]"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <span className="px-2 text-[13px] font-medium text-[#1A1A1A]">{activeFormat.label}</span>
+        )}
         <div className="h-5 w-px bg-[#E0E0E0]" />
         <span className="text-[13px] tabular-nums text-[#A5A5A5] px-1">{Math.round(zoom * 100)}%</span>
         <div className="h-5 w-px bg-[#E0E0E0]" />
-        <span className="text-[13px] text-[#A5A5A5] px-1">{initialFormat.width} × {initialFormat.height}</span>
+        <span className="text-[13px] text-[#A5A5A5] px-1">{activeFormat.width} × {activeFormat.height}</span>
+        {isEdit && (
+          <>
+            <div className="h-5 w-px bg-[#E0E0E0]" />
+            <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+              currentStatus === "active" ? "bg-green-100 text-green-700" :
+              currentStatus === "archived" ? "bg-gray-100 text-gray-600" :
+              "bg-yellow-100 text-yellow-700"
+            }`}>
+              {currentStatus}
+            </span>
+          </>
+        )}
       </div>
 
       {/* ── LEFT PANEL — Layers ── */}
       <div style={{ position: "absolute", left: 12, top: 12, bottom: 12, width: 260, zIndex: 10 }}
         className="flex flex-col overflow-hidden rounded-[32px] bg-white shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         <div className="p-6 pb-4">
-          <Link href="/admin/templates" className="mb-3 inline-flex items-center gap-1 text-[13px] text-[#A5A5A5] hover:text-[#1A1A1A] transition-colors">
+          <Link href="/dashboard" className="mb-3 inline-flex items-center gap-1 text-[13px] text-[#A5A5A5] hover:text-[#1A1A1A] transition-colors">
             <ChevronLeft className="h-3.5 w-3.5" /> Back
           </Link>
           <h2 className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5] mt-4 mb-3">Layers</h2>
@@ -291,9 +525,7 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
         onWheel={onWheel} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
         <div data-viewport="bg" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div data-viewport="bg" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center", width: 4000, height: 4000, position: "relative", flexShrink: 0 }}>
-            {/* Shadow behind the artboard area only */}
             <div style={{ position: "absolute", left: Math.round((4000 - activeFormat.width) / 2), top: Math.round((4000 - activeFormat.height) / 2), width: activeFormat.width, height: activeFormat.height, borderRadius: 12, boxShadow: "0 0 0 1px rgba(0,0,0,0.06), 0 20px 60px rgba(0,0,0,0.12)", pointerEvents: "none", zIndex: 1 }} />
-            {/* Fabric canvas fills the full 4000x4000 area */}
             <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0 }} />
           </div>
         </div>
@@ -347,7 +579,6 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
                 hideBankItems={selectedLayer.editable && !!selectedLayer.linkedBank}
               />
 
-              {/* Bank editors — shown when layer is editable with linked bank */}
               {selectedLayer.editable && selectedLayer.linkedBank && (
                 <>
                   <div className="h-px bg-[#E0E0E0]" />
@@ -371,6 +602,32 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
             <p className="text-[13px] text-[#A5A5A5]">Select a layer on the canvas to edit its properties.</p>
           )}
 
+          {/* Validation + thumbnail (edit mode only) */}
+          {isEdit && (
+            <>
+              <div className="h-px bg-[#E0E0E0]" />
+              <TemplateValidation config={config} />
+
+              <div className="space-y-2">
+                <button
+                  onClick={handleGenerateThumbnail}
+                  disabled={thumbBusy}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] hover:border-[#D1D1D1] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)] disabled:opacity-40 transition-all"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  {thumbBusy ? "Capturing..." : "Generate Thumbnail"}
+                </button>
+                {thumbnail && (
+                  <div className="flex items-center gap-2 text-[11px] text-[#A5A5A5]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={thumbnail} alt="Thumbnail" className="h-8 w-8 rounded border object-cover" />
+                    Thumbnail set
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
         </div>
 
         {/* Save actions */}
@@ -381,11 +638,36 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
               className="flex-1 rounded-xl border border-[#E0E0E0] bg-white px-3 py-2.5 text-[13px] font-medium text-[#1A1A1A] hover:border-[#D1D1D1] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)] disabled:opacity-40 transition-all">
               {saving ? "Saving..." : "Save Draft"}
             </button>
-            <button onClick={() => handleSave("active")} disabled={saving}
-              className="flex-1 rounded-xl bg-[#1A1A1A] px-3 py-2.5 text-[13px] font-semibold text-white hover:bg-[#333] disabled:opacity-40 transition-all">
-              {saving ? "Publishing..." : "Publish"}
-            </button>
+            {currentStatus !== "active" ? (
+              <button
+                onClick={() => handleSave("active")}
+                disabled={saving || hasErrors}
+                title={hasErrors ? "Fix validation errors before publishing" : undefined}
+                className="flex-1 rounded-xl bg-[#1A1A1A] px-3 py-2.5 text-[13px] font-semibold text-white hover:bg-[#333] disabled:opacity-40 transition-all"
+              >
+                {saving ? "Publishing..." : "Publish"}
+              </button>
+            ) : (
+              <button
+                onClick={() => handleSave("active")}
+                disabled={saving || hasErrors}
+                title={hasErrors ? "Fix validation errors before publishing" : undefined}
+                className="flex-1 rounded-xl bg-[#1A1A1A] px-3 py-2.5 text-[13px] font-semibold text-white hover:bg-[#333] disabled:opacity-40 transition-all"
+              >
+                {saving ? "Saving..." : "Update"}
+              </button>
+            )}
           </div>
+          {isEdit && currentStatus === "active" && (
+            <button
+              onClick={() => handleSave("archived")}
+              disabled={saving}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[12px] text-[#666] hover:border-[#D1D1D1] disabled:opacity-40 transition-all"
+            >
+              <Archive className="h-3.5 w-3.5" />
+              Archive
+            </button>
+          )}
         </div>
       </div>
     </div>

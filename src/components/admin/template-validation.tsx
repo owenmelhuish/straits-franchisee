@@ -14,7 +14,9 @@ export function computeValidationIssues(config: TemplateConfig): ValidationIssue
 
   for (const format of config.formats) {
     for (const layer of format.layers) {
-      if (layer.editable && !layer.linkedBank) {
+      // Image layers with no bank can't be edited — they need a bank to swap from.
+      // Text layers without a bank are valid: free-form franchisee input.
+      if (layer.editable && !layer.linkedBank && layer.type !== "text") {
         issues.push({
           level: "warning",
           message: `"${layer.name}" is editable but has no linked bank`,
