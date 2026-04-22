@@ -18,7 +18,10 @@ export function serializeToTemplateConfig(input: SerializeInput): TemplateConfig
     thumbnail: input.thumbnail,
     formats: input.formats.map((f) => ({
       ...f,
-      layers: f.layers.map((l, i) => ({ ...l, zIndex: i })),
+      slides: f.slides.map((s) => ({
+        ...s,
+        layers: s.layers.map((l, i) => ({ ...l, zIndex: i })),
+      })),
     })),
     assetBanks: input.assetBanks,
   };

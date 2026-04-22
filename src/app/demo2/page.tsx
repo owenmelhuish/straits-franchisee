@@ -8,7 +8,7 @@ import { LayerPropertiesForm } from "@/components/mapper/layer-properties-form";
 import { ImageBankEditor } from "@/components/mapper/image-bank-editor";
 import { TextBankEditor } from "@/components/mapper/text-bank-editor";
 import { BankEditor } from "@/components/admin/bank-editor";
-import { TemplateLayer, AssetBankItem } from "@/types/template";
+import { TemplateLayer, AssetBankItem, createSlide } from "@/types/template";
 import { STANDARD_FORMATS } from "@/lib/constants";
 import { useRouter } from "next/navigation";
 import {
@@ -87,14 +87,14 @@ function TemplateBuilder({ format: initialFormat }: { format: typeof STANDARD_FO
     if (!initialized.current) {
       initialized.current = true;
       useMapperStore.setState({
-        formats: [{ name: initialFormat.name, label: initialFormat.label, width: initialFormat.width, height: initialFormat.height, layers: [] }],
-        activeFormatIndex: 0, name: "", slug: "", description: "", assetBanks: [], selectedLayerId: null,
+        formats: [{ name: initialFormat.name, label: initialFormat.label, width: initialFormat.width, height: initialFormat.height, slides: [createSlide()] }],
+        activeFormatIndex: 0, activeSlideIndex: 0, name: "", slug: "", description: "", assetBanks: [], selectedLayerId: null,
       });
       resizeCanvas(initialFormat.width, initialFormat.height);
     }
   }, [initialFormat, resizeCanvas]);
 
-  const activeFormat = formats[0] ?? { width: initialFormat.width, height: initialFormat.height, layers: [] };
+  const activeFormat = formats[0] ?? { width: initialFormat.width, height: initialFormat.height, slides: [] };
   const layers = getActiveLayers();
   const selectedLayer = getSelectedLayer();
 

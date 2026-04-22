@@ -1,7 +1,7 @@
 "use client";
 
 import { Layers, Image, Type, Square } from "lucide-react";
-import { useBuilderStore, selectActiveFormat } from "@/stores/builder-store";
+import { useBuilderStore, selectActiveSlide } from "@/stores/builder-store";
 
 
 const LAYER_ICONS = {
@@ -11,11 +11,11 @@ const LAYER_ICONS = {
 } as const;
 
 export function LayerPanel() {
-  const format = useBuilderStore(selectActiveFormat);
+  const slide = useBuilderStore(selectActiveSlide);
 
-  if (!format) return null;
+  if (!slide) return null;
 
-  const sortedLayers = [...format.layers].sort((a, b) => b.zIndex - a.zIndex);
+  const sortedLayers = [...slide.layers].sort((a, b) => b.zIndex - a.zIndex);
 
   return (
     <div>

@@ -2,19 +2,19 @@
 
 import { Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useBuilderStore } from "@/stores/builder-store";
+import { useBuilderStore, selectAllSlidesReady } from "@/stores/builder-store";
 
 interface LaunchButtonProps {
   onClick: () => void;
 }
 
 export function LaunchButton({ onClick }: LaunchButtonProps) {
-  const isCanvasReady = useBuilderStore((s) => s.isCanvasReady);
+  const allSlidesReady = useBuilderStore(selectAllSlidesReady);
 
   return (
     <Button
       onClick={onClick}
-      disabled={!isCanvasReady}
+      disabled={!allSlidesReady}
       className="w-full rounded-xl bg-[#1A1A1A] text-[13px] font-medium text-white hover:bg-[#333333] disabled:opacity-40"
       size="lg"
     >

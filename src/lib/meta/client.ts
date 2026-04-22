@@ -143,7 +143,9 @@ interface LaunchAdOptions {
   accessToken: string;
   adAccountId: string; // e.g. "act_123456"
   pageId: string;
-  imageUrl: string;
+  // One URL → single-image ad. Multiple → Meta carousel (child_attachments).
+  // Meta requires 2–10 child attachments for a carousel creative.
+  imageUrls: string[];
   templateName: string;
   formatName: string;
   headline?: string;
@@ -204,7 +206,38 @@ export async function launchAd(
   );
   const adSetId = adSet.id as string;
 
-  // 3. Create Ad Creative (using picture URL — no image upload needed)
+  // 3. Create Ad Creative.
+  // Single image → legacy link_data.picture path.
+  // Multi-image → link_data.child_attachments (Meta carousel).
+  if (opts.imageUrls.length === 0) throw new Error("imageUrls must not be empty");
+  if (opts.imageUrls.length > 10) throw new Error("Meta carousel supports up to 10 cards");
+
+  const isCarousel = opts.imageUrls.length > 1;
+  const linkFallback = opts.linkUrl || "https://example.com";
+  const nameFallback = opts.headline || opts.templateName;
+  const ctaType = opts.callToAction || "LEARN_MORE";
+
+  const linkData = isCarousel
+    ? {
+        link: linkFallback,
+        message: opts.bodyText || "",
+        child_attachments: opts.imageUrls.map((url) => ({
+          picture: url,
+          link: linkFallback,
+          name: nameFallback,
+          call_to_action: { type: ctaType },
+        })),
+        multi_share_optimized: false,
+        multi_share_end_card: false,
+      }
+    : {
+        picture: opts.imageUrls[0],
+        link: linkFallback,
+        message: opts.bodyText || "",
+        name: nameFallback,
+        call_to_action: { type: ctaType },
+      };
+
   const creative = await metaPost(
     `${opts.adAccountId}/adcreatives`,
     opts.accessToken,
@@ -212,15 +245,7 @@ export async function launchAd(
       name: `${opts.templateName} - ${opts.formatName} - ${new Date().toISOString().split("T")[0]}`,
       object_story_spec: {
         page_id: opts.pageId,
-        link_data: {
-          picture: opts.imageUrl,
-          link: opts.linkUrl || "https://example.com",
-          message: opts.bodyText || "",
-          name: opts.headline || opts.templateName,
-          call_to_action: {
-            type: opts.callToAction || "LEARN_MORE",
-          },
-        },
+        link_data: linkData,
       },
     }
   );

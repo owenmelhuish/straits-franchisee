@@ -3,22 +3,21 @@
 import { Settings2 } from "lucide-react";
 import {
   useBuilderStore,
-  selectActiveFormat,
-  selectAssetBank,
+  selectActiveSlide,
 } from "@/stores/builder-store";
 
 import { AssetDropdown } from "./asset-dropdown";
 
 export function ControlsPanel() {
-  const format = useBuilderStore(selectActiveFormat);
+  const slide = useBuilderStore(selectActiveSlide);
   const template = useBuilderStore((s) => s.template);
   const layerSelections = useBuilderStore((s) => s.layerSelections);
   const setLayerSelection = useBuilderStore((s) => s.setLayerSelection);
 
-  if (!format || !template) return null;
+  if (!slide || !template) return null;
 
-  // Get editable layers for the current format
-  const editableLayers = format.layers
+  // Get editable layers for the active slide
+  const editableLayers = slide.layers
     .filter((l) => l.editable && l.linkedBank)
     .sort((a, b) => a.zIndex - b.zIndex);
 

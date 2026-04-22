@@ -2,7 +2,11 @@
 
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useBuilderStore, selectActiveFormat } from "@/stores/builder-store";
+import {
+  useBuilderStore,
+  selectActiveFormat,
+  selectAllSlidesReady,
+} from "@/stores/builder-store";
 
 interface ExportButtonProps {
   onExport: () => void;
@@ -10,13 +14,13 @@ interface ExportButtonProps {
 
 export function ExportButton({ onExport }: ExportButtonProps) {
   const isExporting = useBuilderStore((s) => s.isExporting);
-  const isCanvasReady = useBuilderStore((s) => s.isCanvasReady);
+  const allSlidesReady = useBuilderStore(selectAllSlidesReady);
   const format = useBuilderStore(selectActiveFormat);
 
   return (
     <Button
       onClick={onExport}
-      disabled={isExporting || !isCanvasReady}
+      disabled={isExporting || !allSlidesReady}
       className="w-full"
       size="lg"
     >

@@ -1,4 +1,4 @@
-import { TemplateConfig } from "./template";
+import { TemplateConfig, hydrateFormatSlides } from "./template";
 
 export type UserRole = "admin" | "franchisee";
 
@@ -37,6 +37,9 @@ export interface SubmissionRow {
   user_id: string;
   format_name: string;
   file_url: string;
+  // Carousel support: all slide PNGs in order (null for legacy single-image submissions).
+  // file_url stays set to slide_file_urls[0] so dashboards/download UIs keep working.
+  slide_file_urls: string[] | null;
   selections: Record<string, string>;
   campaign_start: string | null;
   campaign_end: string | null;
@@ -48,7 +51,9 @@ export interface SubmissionRow {
   meta_status: string | null;
 }
 
-// Convert DB row → TemplateConfig (what the canvas engine expects)
+// Convert DB row → TemplateConfig (what the canvas engine expects).
+// Legacy rows use `formats[].layers[]`; new rows use `formats[].slides[].layers[]`.
+// We normalize to slides here so the rest of the app only sees the new shape.
 export function templateRowToConfig(row: TemplateRow): TemplateConfig {
   return {
     id: row.id,
@@ -56,7 +61,7 @@ export function templateRowToConfig(row: TemplateRow): TemplateConfig {
     slug: row.slug,
     description: row.description ?? "",
     thumbnail: row.thumbnail_url ?? "",
-    formats: row.config.formats,
+    formats: row.config.formats.map(hydrateFormatSlides),
     assetBanks: row.config.assetBanks,
   };
 }

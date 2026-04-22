@@ -12,7 +12,8 @@ import {
   computeValidationIssues,
   hasBlockingErrors,
 } from "@/components/admin/template-validation";
-import { TemplateLayer, AssetBankItem, TemplateConfig, TemplateFormat } from "@/types/template";
+import { TemplateLayer, AssetBankItem, TemplateConfig, TemplateFormat, createSlide } from "@/types/template";
+import { SlideCanvas } from "./slide-canvas";
 import { TemplateRow, templateRowToConfig } from "@/types/database";
 import { STANDARD_FORMATS } from "@/lib/constants";
 import { useRouter } from "next/navigation";
@@ -31,6 +32,8 @@ import {
   Maximize,
   Camera,
   Archive,
+  Copy,
+  X,
 } from "lucide-react";
 
 /* ─── Format selection screen (new template only) ─── */
@@ -139,7 +142,7 @@ function TemplateBuilder(props: BuilderProps) {
     addTextBox,
     removeLayer,
     resizeCanvas,
-    loadFormatLayers,
+    loadLayers,
     updateCanvasObject,
     previewImageOnLayer,
     previewTextOnLayer,
@@ -152,6 +155,8 @@ function TemplateBuilder(props: BuilderProps) {
     name, slug, description, thumbnail,
     setName, setSlug, setDescription, setThumbnail,
     formats, activeFormatIndex, setActiveFormatIndex,
+    activeSlideIndex, setActiveSlideIndex,
+    addSlide, removeSlide, reorderSlides, duplicateSlide, renameSlide,
     getActiveLayers, getSelectedLayer, selectedLayerId, setSelectedLayerId,
     updateLayer, reorderLayers,
   } = useMapperStore();
@@ -163,8 +168,9 @@ function TemplateBuilder(props: BuilderProps) {
     if (props.mode === "create") {
       const f = props.initialFormat;
       useMapperStore.setState({
-        formats: [{ name: f.name, label: f.label, width: f.width, height: f.height, layers: [] }],
+        formats: [{ name: f.name, label: f.label, width: f.width, height: f.height, slides: [createSlide()] }],
         activeFormatIndex: 0,
+        activeSlideIndex: 0,
         name: "", slug: "", description: "", thumbnail: "",
         assetBanks: [], selectedLayerId: null,
         previewingBankItemId: null, previewingLayerId: null,
@@ -184,39 +190,47 @@ function TemplateBuilder(props: BuilderProps) {
       thumbnail: cfg.thumbnail || "",
       formats: cfg.formats,
       activeFormatIndex: 0,
+      activeSlideIndex: 0,
       assetBanks: banks,
       selectedLayerId: null,
       previewingBankItemId: null,
       previewingLayerId: null,
     });
     const first = cfg.formats[0];
-    if (first) {
+    const firstSlide = first?.slides[0];
+    if (first && firstSlide) {
       resizeCanvas(first.width, first.height);
       // Load layers after resize completes synchronously
-      void loadFormatLayers(first.layers);
+      void loadLayers(firstSlide.layers);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Switch format: resize + reload layers when activeFormatIndex changes (skip first run)
-  const lastFormatIdx = useRef<number | null>(null);
+  // Switch format/slide: resize + reload layers when either index changes (skip first run).
+  // Dimensions only change on format switch; slide switch just reloads layers.
+  const lastSlideKey = useRef<string | null>(null);
   useEffect(() => {
-    if (lastFormatIdx.current === null) {
-      lastFormatIdx.current = activeFormatIndex;
+    const key = `${activeFormatIndex}:${activeSlideIndex}`;
+    if (lastSlideKey.current === null) {
+      lastSlideKey.current = key;
       return;
     }
-    if (lastFormatIdx.current === activeFormatIndex) return;
-    lastFormatIdx.current = activeFormatIndex;
+    if (lastSlideKey.current === key) return;
+    const prevFormatIdx = Number(lastSlideKey.current.split(":")[0]);
+    lastSlideKey.current = key;
 
     const fmt = formats[activeFormatIndex];
-    if (!fmt) return;
-    resizeCanvas(fmt.width, fmt.height);
-    void loadFormatLayers(fmt.layers);
+    const slide = fmt?.slides[activeSlideIndex];
+    if (!fmt || !slide) return;
+    if (prevFormatIdx !== activeFormatIndex) {
+      resizeCanvas(fmt.width, fmt.height);
+    }
+    void loadLayers(slide.layers);
     setSelectedLayerId(null);
-  }, [activeFormatIndex, formats, resizeCanvas, loadFormatLayers, setSelectedLayerId]);
+  }, [activeFormatIndex, activeSlideIndex, formats, resizeCanvas, loadLayers, setSelectedLayerId]);
 
   const activeFormat: TemplateFormat = formats[activeFormatIndex] ?? {
-    name: "", label: "", width: 1080, height: 1080, layers: [],
+    name: "", label: "", width: 1080, height: 1080, slides: [{ id: "fallback", layers: [] }],
   };
   const layers = getActiveLayers();
   const selectedLayer = getSelectedLayer();
@@ -231,12 +245,29 @@ function TemplateBuilder(props: BuilderProps) {
   const spaceHeld = useRef(false);
   const ZOOM_STEP = 0.05, MIN_ZOOM = 0.1, MAX_ZOOM = 3;
 
+  // Layout: all slides render side-by-side in a single flex row inside the pan/zoom wrapper.
+  // Active slide = interactive mapper canvas. Others = faded previews.
+  // Mapper wrapper clips X (to keep clicks inside the active slot's column) but leaves Y open,
+  // so Fabric's handles can extend freely above and below the artboard regardless of object size.
+  const SLIDE_GAP = 280;
+  const HANDLE_PAD_X = 200; // horizontal headroom for handles; must be < SLIDE_GAP to not overlap neighbors
+  const PLUS_SIZE = 280; // circular button diameter
+  const rowWidth =
+    activeFormat.slides.length * activeFormat.width +
+    Math.max(0, activeFormat.slides.length - 1) * SLIDE_GAP +
+    PLUS_SIZE + SLIDE_GAP;
+  const rowHeight = activeFormat.height;
+
   const fitToView = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
-    const s = Math.min((el.clientWidth - 160) / activeFormat.width, (el.clientHeight - 160) / activeFormat.height, 1);
+    const s = Math.min(
+      (el.clientWidth - 160) / Math.max(1, rowWidth),
+      (el.clientHeight - 160) / Math.max(1, rowHeight),
+      1,
+    );
     setZoom(s); setPan({ x: 0, y: 0 });
-  }, [activeFormat.width, activeFormat.height]);
+  }, [rowWidth, rowHeight]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -438,6 +469,79 @@ function TemplateBuilder(props: BuilderProps) {
   return (
     <div className="h-screen w-screen overflow-hidden" style={{ backgroundColor: "#F4F4F4", fontFamily: "Inter, system-ui, sans-serif" }}>
 
+      {/* ── SLIDE STRIP (below format tabs) ── */}
+      <div style={{ position: "absolute", top: 64, left: "50%", transform: "translateX(-50%)", zIndex: 30 }}
+        className="flex items-center gap-1 rounded-2xl bg-white px-2 py-1.5 shadow-[0px_4px_20px_rgba(0,0,0,0.06)]">
+        {activeFormat.slides.map((s, i) => {
+          const isActive = i === activeSlideIndex;
+          const canDelete = activeFormat.slides.length > 1;
+          const atMax = activeFormat.slides.length >= 10;
+          return (
+            <div key={s.id} className="group relative flex items-center">
+              <button
+                onClick={() => setActiveSlideIndex(i)}
+                onDoubleClick={() => {
+                  const next = window.prompt("Rename slide", s.label ?? `Slide ${i + 1}`);
+                  if (next !== null && next.trim()) renameSlide(activeFormatIndex, i, next.trim());
+                }}
+                className={`rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors ${
+                  isActive ? "bg-[#1A1A1A] text-white" : "text-[#666] hover:bg-[#F4F4F4]"
+                }`}
+                title={`${s.label ?? `Slide ${i + 1}`} — double-click to rename`}
+              >
+                {s.label ?? `Slide ${i + 1}`}
+              </button>
+              {isActive && (
+                <div className="flex items-center gap-0.5 ml-1">
+                  <button
+                    onClick={() => i > 0 && reorderSlides(activeFormatIndex, i, i - 1)}
+                    disabled={i === 0}
+                    title="Move slide left"
+                    className="rounded p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A] disabled:opacity-30"
+                  >
+                    <ChevronUp className="h-3 w-3 -rotate-90" />
+                  </button>
+                  <button
+                    onClick={() => i < activeFormat.slides.length - 1 && reorderSlides(activeFormatIndex, i, i + 1)}
+                    disabled={i === activeFormat.slides.length - 1}
+                    title="Move slide right"
+                    className="rounded p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A] disabled:opacity-30"
+                  >
+                    <ChevronDown className="h-3 w-3 -rotate-90" />
+                  </button>
+                  <button
+                    onClick={() => duplicateSlide(activeFormatIndex, i)}
+                    disabled={atMax}
+                    title="Duplicate slide"
+                    className="rounded p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A] disabled:opacity-30"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={() => canDelete && removeSlide(activeFormatIndex, i)}
+                    disabled={!canDelete}
+                    title={canDelete ? "Delete slide" : "Can't delete the only slide"}
+                    className="rounded p-1 text-[#A5A5A5] hover:bg-red-50 hover:text-red-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#A5A5A5]"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <div className="mx-1 h-5 w-px bg-[#E0E0E0]" />
+        <button
+          onClick={() => addSlide(activeFormatIndex)}
+          disabled={activeFormat.slides.length >= 10}
+          title={activeFormat.slides.length >= 10 ? "Max 10 slides" : "Add slide"}
+          className="flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-medium text-[#1A1A1A] hover:bg-[#F4F4F4] disabled:opacity-30 disabled:hover:bg-transparent"
+        >
+          <Plus className="h-3 w-3" />
+          Add
+        </button>
+      </div>
+
       {/* ── TOP TOOLBAR ── */}
       <div style={{ position: "absolute", top: 14, left: "50%", transform: "translateX(-50%)", zIndex: 30 }}
         className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-[0px_4px_20px_rgba(0,0,0,0.06)]">
@@ -519,14 +623,120 @@ function TemplateBuilder(props: BuilderProps) {
         </div>
       </div>
 
-      {/* ── CENTER CANVAS ── */}
+      {/* ── CENTER CANVAS — all slides side-by-side ── */}
       <div ref={containerRef} data-viewport="bg"
         style={{ position: "absolute", left: 284, right: 324, top: 0, bottom: 0, overflow: "hidden", backgroundColor: "#EBEBEB", borderRadius: 24, margin: "12px 0" }}
         onWheel={onWheel} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
         <div data-viewport="bg" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div data-viewport="bg" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center", width: 4000, height: 4000, position: "relative", flexShrink: 0 }}>
-            <div style={{ position: "absolute", left: Math.round((4000 - activeFormat.width) / 2), top: Math.round((4000 - activeFormat.height) / 2), width: activeFormat.width, height: activeFormat.height, borderRadius: 12, boxShadow: "0 0 0 1px rgba(0,0,0,0.06), 0 20px 60px rgba(0,0,0,0.12)", pointerEvents: "none", zIndex: 1 }} />
-            <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0 }} />
+          <div data-viewport="bg" style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: "center",
+            width: rowWidth,
+            height: rowHeight,
+            position: "relative",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: SLIDE_GAP,
+          }}>
+            {/*
+              Every slide is rendered as a SlideCanvas and stays mounted — including the
+              active one, which keeps its Fabric preview persistent and up to date with
+              store edits. The interactive mapper canvas overlays the active slot via the
+              absolute-positioned wrapper below. Persistent previews ensure inactive
+              slides always reflect their latest layer state.
+            */}
+            {activeFormat.slides.map((slide, i) => {
+              const isActive = i === activeSlideIndex;
+              return (
+                <SlideCanvas
+                  key={slide.id}
+                  slide={slide}
+                  format={activeFormat}
+                  layerSelections={{}}
+                  isActive={isActive}
+                  index={i}
+                  onClick={() => setActiveSlideIndex(i)}
+                  onReady={() => {}}
+                  registerExport={() => {}}
+                />
+              );
+            })}
+
+            {/* + button — spawn a new slide beside the last canvas */}
+            <button
+              onClick={() => addSlide(activeFormatIndex)}
+              disabled={activeFormat.slides.length >= 10}
+              title={activeFormat.slides.length >= 10 ? "Max 10 slides" : "Add slide"}
+              style={{
+                width: PLUS_SIZE,
+                height: PLUS_SIZE,
+                flexShrink: 0,
+                borderRadius: "50%",
+                border: "3px dashed #BDBDBD",
+                backgroundColor: "rgba(255,255,255,0.4)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexDirection: "column",
+                gap: 8,
+                cursor: activeFormat.slides.length >= 10 ? "not-allowed" : "pointer",
+                opacity: activeFormat.slides.length >= 10 ? 0.3 : 0.55,
+                transition: "all 120ms ease",
+                color: "#666",
+              }}
+            >
+              <Plus style={{ width: 56, height: 56 }} />
+              <span style={{ fontSize: 28, fontWeight: 600 }}>Add slide</span>
+            </button>
+
+            {/*
+              Mapper canvas — stable DOM position; only its `left` shifts when the active
+              slide changes. Overlays the active placeholder above. A PAD margin around
+              the artboard lets Fabric's selection/resize handles render outside the
+              artboard edge (handles aren't clipped by Fabric's internal clipPath).
+            */}
+            {(() => {
+              // When an object is selected, drop all clipping — the canvas is 4000×4000,
+              // so Fabric's borders and handles can render at any object size without
+              // being cut off. When nothing is selected, clip horizontally so the canvas
+              // doesn't cover neighbor previews and block click-to-switch-slide.
+              const hasSelection = selectedLayerId !== null;
+              const wrapperW = activeFormat.width + HANDLE_PAD_X * 2;
+              const wrapperH = activeFormat.height;
+              const innerLeft = -Math.round((4000 - activeFormat.width) / 2) + HANDLE_PAD_X;
+              const innerTop = -Math.round((4000 - activeFormat.height) / 2);
+              return (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: activeSlideIndex * (activeFormat.width + SLIDE_GAP) - HANDLE_PAD_X,
+                    width: wrapperW,
+                    height: wrapperH,
+                    overflow: hasSelection ? "visible" : "hidden",
+                    pointerEvents: "auto",
+                    zIndex: 5,
+                    transition: "left 160ms ease",
+                  }}
+                >
+                  <div style={{ position: "absolute", width: 4000, height: 4000, left: innerLeft, top: innerTop }}>
+                    <canvas ref={canvasRef} style={{ position: "absolute", top: 0, left: 0 }} />
+                  </div>
+                  <div style={{
+                    position: "absolute",
+                    top: 16,
+                    left: HANDLE_PAD_X + 16,
+                    padding: "6px 12px", borderRadius: 999,
+                    backgroundColor: "#1A1A1A", color: "white",
+                    fontSize: 18, fontWeight: 600, letterSpacing: 0.2,
+                    pointerEvents: "none", zIndex: 2,
+                  }}>
+                    {activeFormat.slides[activeSlideIndex]?.label ?? `Slide ${activeSlideIndex + 1}`}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 

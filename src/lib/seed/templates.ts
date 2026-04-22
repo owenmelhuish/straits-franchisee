@@ -1,6 +1,19 @@
-import { TemplateConfig } from "@/types/template";
+import { TemplateConfig, TemplateLayer, hydrateFormatSlides } from "@/types/template";
 
-export const SEED_TEMPLATES: TemplateConfig[] = [
+// Legacy-shaped seed data (uses `layers` directly on each format).
+// We hydrate to the new `slides` shape at module load so consumers only see TemplateConfig.
+interface LegacySeedFormat {
+  name: string;
+  label: string;
+  width: number;
+  height: number;
+  layers: TemplateLayer[];
+}
+interface LegacySeedTemplate extends Omit<TemplateConfig, "formats"> {
+  formats: LegacySeedFormat[];
+}
+
+const LEGACY_SEEDS: LegacySeedTemplate[] = [
   {
     id: "summer-promo-001",
     name: "Summer Promo",
@@ -337,6 +350,11 @@ export const SEED_TEMPLATES: TemplateConfig[] = [
     ],
   },
 ];
+
+export const SEED_TEMPLATES: TemplateConfig[] = LEGACY_SEEDS.map((t) => ({
+  ...t,
+  formats: t.formats.map(hydrateFormatSlides),
+}));
 
 export function getTemplateBySlug(slug: string): TemplateConfig | undefined {
   return SEED_TEMPLATES.find((t) => t.slug === slug);

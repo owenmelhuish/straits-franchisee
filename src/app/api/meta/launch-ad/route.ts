@@ -4,7 +4,9 @@ import { launchAd } from "@/lib/meta/client";
 
 interface LaunchAdBody {
   submissionId: string;
-  fileUrl: string;
+  // Preferred: array of slide URLs. Falls back to legacy `fileUrl` if absent.
+  fileUrls?: string[];
+  fileUrl?: string;
   templateName: string;
   formatName: string;
   headline?: string;
@@ -21,6 +23,7 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as LaunchAdBody;
     const {
       submissionId,
+      fileUrls,
       fileUrl,
       templateName,
       formatName,
@@ -33,7 +36,10 @@ export async function POST(request: NextRequest) {
       endTime,
     } = body;
 
-    if (!submissionId || !fileUrl || !templateName || !formatName) {
+    const imageUrls =
+      fileUrls && fileUrls.length > 0 ? fileUrls : fileUrl ? [fileUrl] : [];
+
+    if (!submissionId || imageUrls.length === 0 || !templateName || !formatName) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -75,7 +81,7 @@ export async function POST(request: NextRequest) {
       accessToken: profile.meta_access_token,
       adAccountId: profile.meta_ad_account_id,
       pageId: profile.meta_page_id,
-      imageUrl: fileUrl,
+      imageUrls,
       templateName,
       formatName,
       headline,

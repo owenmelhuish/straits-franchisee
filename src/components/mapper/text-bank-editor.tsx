@@ -5,7 +5,7 @@ import { useMapperStore } from "@/stores/mapper-store";
 import { TemplateLayer, AssetBankItem } from "@/types/template";
 import { Eye, EyeOff, Trash2, Plus, Type, ChevronDown } from "lucide-react";
 
-const FONT_OPTIONS = ["Arial", "Helvetica", "Georgia", "Times New Roman", "Courier New", "Verdana", "Impact"];
+const FONT_OPTIONS = ["Arial", "Helvetica", "Georgia", "Times New Roman", "Courier New", "Verdana", "Impact", "Bebas Neue"];
 const WEIGHT_OPTIONS = [
   { label: "Light", value: "300" },
   { label: "Normal", value: "normal" },

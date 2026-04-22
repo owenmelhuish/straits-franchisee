@@ -1,5 +1,13 @@
 import { create } from "zustand";
-import { TemplateLayer, TemplateFormat, AssetBank, AssetBankItem, TemplateConfig } from "@/types/template";
+import {
+  TemplateLayer,
+  TemplateFormat,
+  TemplateSlide,
+  AssetBank,
+  AssetBankItem,
+  TemplateConfig,
+  createSlide,
+} from "@/types/template";
 import { STANDARD_FORMATS } from "@/lib/constants";
 import { serializeToTemplateConfig } from "@/lib/canvas/serialize";
 
@@ -10,9 +18,10 @@ interface MapperState {
   description: string;
   thumbnail: string;
 
-  // Formats — each has independent layers
+  // Formats — each has independent slides (each slide has independent layers)
   formats: TemplateFormat[];
   activeFormatIndex: number;
+  activeSlideIndex: number;
 
   // Asset banks — shared across all formats
   assetBanks: AssetBank[];
@@ -33,7 +42,15 @@ interface MapperState {
   // Format actions
   setActiveFormatIndex: (index: number) => void;
 
-  // Layer CRUD — operates on formats[activeFormatIndex].layers
+  // Slide actions
+  setActiveSlideIndex: (index: number) => void;
+  addSlide: (formatIndex?: number) => void;
+  removeSlide: (formatIndex: number, slideIndex: number) => void;
+  reorderSlides: (formatIndex: number, from: number, to: number) => void;
+  duplicateSlide: (formatIndex: number, slideIndex: number) => void;
+  renameSlide: (formatIndex: number, slideIndex: number, label: string) => void;
+
+  // Layer CRUD — operates on formats[activeFormatIndex].slides[activeSlideIndex].layers
   addLayer: (layer: TemplateLayer) => void;
   updateLayer: (id: string, updates: Partial<TemplateLayer>) => void;
   removeLayer: (id: string) => void;
@@ -55,6 +72,7 @@ interface MapperState {
   // Helpers
   getActiveLayers: () => TemplateLayer[];
   getActiveFormat: () => TemplateFormat;
+  getActiveSlide: () => TemplateSlide | undefined;
   getSelectedLayer: () => TemplateLayer | undefined;
   toTemplateConfig: () => TemplateConfig;
 }
@@ -65,8 +83,35 @@ function createInitialFormats(): TemplateFormat[] {
     label: f.label,
     width: f.width,
     height: f.height,
-    layers: [],
+    slides: [createSlide()],
   }));
+}
+
+function updateFormatAt(
+  formats: TemplateFormat[],
+  index: number,
+  mutate: (f: TemplateFormat) => TemplateFormat
+): TemplateFormat[] {
+  const next = [...formats];
+  const f = next[index];
+  if (!f) return next;
+  next[index] = mutate(f);
+  return next;
+}
+
+function updateSlideAt(
+  formats: TemplateFormat[],
+  formatIndex: number,
+  slideIndex: number,
+  mutate: (s: TemplateSlide) => TemplateSlide
+): TemplateFormat[] {
+  return updateFormatAt(formats, formatIndex, (f) => {
+    const slides = [...f.slides];
+    const s = slides[slideIndex];
+    if (!s) return f;
+    slides[slideIndex] = mutate(s);
+    return { ...f, slides };
+  });
 }
 
 export const useMapperStore = create<MapperState>((set, get) => ({
@@ -76,6 +121,7 @@ export const useMapperStore = create<MapperState>((set, get) => ({
   thumbnail: "",
   formats: createInitialFormats(),
   activeFormatIndex: 0,
+  activeSlideIndex: 0,
   assetBanks: [],
   selectedLayerId: null,
   previewingBankItemId: null,
@@ -86,51 +132,147 @@ export const useMapperStore = create<MapperState>((set, get) => ({
   setDescription: (description) => set({ description }),
   setThumbnail: (thumbnail) => set({ thumbnail }),
 
-  setActiveFormatIndex: (index) => set({ activeFormatIndex: index, selectedLayerId: null }),
+  setActiveFormatIndex: (index) =>
+    set({ activeFormatIndex: index, activeSlideIndex: 0, selectedLayerId: null }),
 
-  addLayer: (layer) =>
-    set((state) => {
-      const formats = [...state.formats];
-      const format = { ...formats[state.activeFormatIndex] };
-      format.layers = [...format.layers, layer];
-      formats[state.activeFormatIndex] = format;
-      return { formats };
-    }),
+  setActiveSlideIndex: (index) => set({ activeSlideIndex: index, selectedLayerId: null }),
 
-  updateLayer: (id, updates) =>
+  addSlide: (formatIndex) =>
     set((state) => {
-      const formats = [...state.formats];
-      const format = { ...formats[state.activeFormatIndex] };
-      format.layers = format.layers.map((l) =>
-        l.id === id ? { ...l, ...updates } : l
-      );
-      formats[state.activeFormatIndex] = format;
-      return { formats };
-    }),
-
-  removeLayer: (id) =>
-    set((state) => {
-      const formats = [...state.formats];
-      const format = { ...formats[state.activeFormatIndex] };
-      format.layers = format.layers.filter((l) => l.id !== id);
-      formats[state.activeFormatIndex] = format;
+      const fIdx = formatIndex ?? state.activeFormatIndex;
+      const formats = updateFormatAt(state.formats, fIdx, (f) => ({
+        ...f,
+        slides: [...f.slides, createSlide()],
+      }));
+      const newSlideIndex = formats[fIdx]!.slides.length - 1;
       return {
         formats,
-        selectedLayerId: state.selectedLayerId === id ? null : state.selectedLayerId,
+        activeFormatIndex: fIdx,
+        activeSlideIndex: newSlideIndex,
+        selectedLayerId: null,
       };
     }),
 
-  reorderLayers: (fromIndex, toIndex) =>
+  removeSlide: (formatIndex, slideIndex) =>
     set((state) => {
-      const formats = [...state.formats];
-      const format = { ...formats[state.activeFormatIndex] };
-      const layers = [...format.layers];
-      const [moved] = layers.splice(fromIndex, 1);
-      layers.splice(toIndex, 0, moved);
-      format.layers = layers.map((l, i) => ({ ...l, zIndex: i }));
-      formats[state.activeFormatIndex] = format;
-      return { formats };
+      const format = state.formats[formatIndex];
+      if (!format) return {};
+      if (format.slides.length <= 1) return {}; // block removing last slide
+      const formats = updateFormatAt(state.formats, formatIndex, (f) => ({
+        ...f,
+        slides: f.slides.filter((_, i) => i !== slideIndex),
+      }));
+      const nextSlides = formats[formatIndex]!.slides;
+      // Clamp active slide index
+      let activeSlideIndex = state.activeSlideIndex;
+      if (formatIndex === state.activeFormatIndex) {
+        if (state.activeSlideIndex >= nextSlides.length) {
+          activeSlideIndex = nextSlides.length - 1;
+        } else if (state.activeSlideIndex > slideIndex) {
+          activeSlideIndex = state.activeSlideIndex - 1;
+        }
+      }
+      return { formats, activeSlideIndex, selectedLayerId: null };
     }),
+
+  reorderSlides: (formatIndex, from, to) =>
+    set((state) => {
+      const formats = updateFormatAt(state.formats, formatIndex, (f) => {
+        const slides = [...f.slides];
+        const [moved] = slides.splice(from, 1);
+        slides.splice(to, 0, moved);
+        return { ...f, slides };
+      });
+      // Keep active slide pointing at the same slide after reorder
+      let activeSlideIndex = state.activeSlideIndex;
+      if (formatIndex === state.activeFormatIndex) {
+        if (state.activeSlideIndex === from) activeSlideIndex = to;
+        else if (from < state.activeSlideIndex && to >= state.activeSlideIndex) {
+          activeSlideIndex = state.activeSlideIndex - 1;
+        } else if (from > state.activeSlideIndex && to <= state.activeSlideIndex) {
+          activeSlideIndex = state.activeSlideIndex + 1;
+        }
+      }
+      return { formats, activeSlideIndex };
+    }),
+
+  duplicateSlide: (formatIndex, slideIndex) =>
+    set((state) => {
+      const format = state.formats[formatIndex];
+      const slide = format?.slides[slideIndex];
+      if (!slide) return {};
+      const cloned = createSlide(
+        // Give layers fresh ids so selections/refs don't collide
+        slide.layers.map((l) => ({ ...l, id: crypto.randomUUID() })),
+        slide.label ? `${slide.label} (copy)` : undefined
+      );
+      const formats = updateFormatAt(state.formats, formatIndex, (f) => {
+        const slides = [...f.slides];
+        slides.splice(slideIndex + 1, 0, cloned);
+        return { ...f, slides };
+      });
+      const activeSlideIndex =
+        formatIndex === state.activeFormatIndex ? slideIndex + 1 : state.activeSlideIndex;
+      return { formats, activeSlideIndex };
+    }),
+
+  renameSlide: (formatIndex, slideIndex, label) =>
+    set((state) => ({
+      formats: updateSlideAt(state.formats, formatIndex, slideIndex, (s) => ({ ...s, label })),
+    })),
+
+  addLayer: (layer) =>
+    set((state) =>
+      ({
+        formats: updateSlideAt(
+          state.formats,
+          state.activeFormatIndex,
+          state.activeSlideIndex,
+          (s) => ({ ...s, layers: [...s.layers, layer] })
+        ),
+      })
+    ),
+
+  updateLayer: (id, updates) =>
+    set((state) =>
+      ({
+        formats: updateSlideAt(
+          state.formats,
+          state.activeFormatIndex,
+          state.activeSlideIndex,
+          (s) => ({
+            ...s,
+            layers: s.layers.map((l) => (l.id === id ? { ...l, ...updates } : l)),
+          })
+        ),
+      })
+    ),
+
+  removeLayer: (id) =>
+    set((state) => ({
+      formats: updateSlideAt(
+        state.formats,
+        state.activeFormatIndex,
+        state.activeSlideIndex,
+        (s) => ({ ...s, layers: s.layers.filter((l) => l.id !== id) })
+      ),
+      selectedLayerId: state.selectedLayerId === id ? null : state.selectedLayerId,
+    })),
+
+  reorderLayers: (fromIndex, toIndex) =>
+    set((state) => ({
+      formats: updateSlideAt(
+        state.formats,
+        state.activeFormatIndex,
+        state.activeSlideIndex,
+        (s) => {
+          const layers = [...s.layers];
+          const [moved] = layers.splice(fromIndex, 1);
+          layers.splice(toIndex, 0, moved);
+          return { ...s, layers: layers.map((l, i) => ({ ...l, zIndex: i })) };
+        }
+      ),
+    })),
 
   setSelectedLayerId: (id) => set({ selectedLayerId: id }),
 
@@ -169,7 +311,8 @@ export const useMapperStore = create<MapperState>((set, get) => ({
 
   getActiveLayers: () => {
     const state = get();
-    return state.formats[state.activeFormatIndex]?.layers ?? [];
+    const slide = state.formats[state.activeFormatIndex]?.slides[state.activeSlideIndex];
+    return slide?.layers ?? [];
   },
 
   getActiveFormat: () => {
@@ -177,12 +320,16 @@ export const useMapperStore = create<MapperState>((set, get) => ({
     return state.formats[state.activeFormatIndex];
   },
 
+  getActiveSlide: () => {
+    const state = get();
+    return state.formats[state.activeFormatIndex]?.slides[state.activeSlideIndex];
+  },
+
   getSelectedLayer: () => {
     const state = get();
     if (!state.selectedLayerId) return undefined;
-    return state.formats[state.activeFormatIndex]?.layers.find(
-      (l) => l.id === state.selectedLayerId
-    );
+    const slide = state.formats[state.activeFormatIndex]?.slides[state.activeSlideIndex];
+    return slide?.layers.find((l) => l.id === state.selectedLayerId);
   },
 
   toTemplateConfig: () => {

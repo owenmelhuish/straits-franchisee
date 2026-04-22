@@ -13,28 +13,46 @@ export function computeValidationIssues(config: TemplateConfig): ValidationIssue
   const bankNames = new Set(config.assetBanks.map((b) => b.name));
 
   for (const format of config.formats) {
-    for (const layer of format.layers) {
-      // Image layers with no bank can't be edited — they need a bank to swap from.
-      // Text layers without a bank are valid: free-form franchisee input.
-      if (layer.editable && !layer.linkedBank && layer.type !== "text") {
-        issues.push({
-          level: "warning",
-          message: `"${layer.name}" is editable but has no linked bank`,
-        });
-      }
+    if (format.slides.length > 10) {
+      issues.push({
+        level: "error",
+        message: `Format "${format.label}" has ${format.slides.length} slides (Meta carousel max is 10)`,
+      });
+    }
+    // Meta carousels work best with square creatives. Non-square carousels
+    // may be cropped in some placements.
+    if (format.slides.length > 1 && format.width !== format.height) {
+      issues.push({
+        level: "info",
+        message: `"${format.label}" is a carousel with a non-square aspect ratio (${format.width}×${format.height}) — Meta may crop it in some placements.`,
+      });
+    }
+    for (let si = 0; si < format.slides.length; si++) {
+      const slide = format.slides[si];
+      const slideLabel = slide.label ?? `Slide ${si + 1}`;
+      for (const layer of slide.layers) {
+        // Image layers with no bank can't be edited — they need a bank to swap from.
+        // Text layers without a bank are valid: free-form franchisee input.
+        if (layer.editable && !layer.linkedBank && layer.type !== "text") {
+          issues.push({
+            level: "warning",
+            message: `"${layer.name}" (${slideLabel}) is editable but has no linked bank`,
+          });
+        }
 
-      if (layer.linkedBank && !bankNames.has(layer.linkedBank)) {
-        issues.push({
-          level: "error",
-          message: `"${layer.name}" links to non-existent bank "${layer.linkedBank}"`,
-        });
-      }
+        if (layer.linkedBank && !bankNames.has(layer.linkedBank)) {
+          issues.push({
+            level: "error",
+            message: `"${layer.name}" (${slideLabel}) links to non-existent bank "${layer.linkedBank}"`,
+          });
+        }
 
-      if (layer.type === "image" && !layer.src && !layer.editable) {
-        issues.push({
-          level: "info",
-          message: `"${layer.name}" is an image layer with no source`,
-        });
+        if (layer.type === "image" && !layer.src && !layer.editable) {
+          issues.push({
+            level: "info",
+            message: `"${layer.name}" (${slideLabel}) is an image layer with no source`,
+          });
+        }
       }
     }
   }

@@ -40,9 +40,9 @@ export function PropertiesPanel({ onLayerUpdate }: PropertiesPanelProps) {
 
   const selectedLayer = getSelectedLayer();
 
-  // Collect all layers across all formats for "used by" lookup
+  // Collect all layers across all formats and slides for "used by" lookup
   const allLayers = useMemo(
-    () => formats.flatMap((f) => f.layers),
+    () => formats.flatMap((f) => f.slides.flatMap((s) => s.layers)),
     [formats]
   );
 

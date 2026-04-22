@@ -2,8 +2,13 @@
 
 import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { useCreativeCanvas } from "@/hooks/use-creative-canvas";
-import { useBuilderStore, selectActiveFormat } from "@/stores/builder-store";
+import {
+  useBuilderStore,
+  selectActiveFormat,
+  selectActiveSlide,
+  selectAllSlidesReady,
+} from "@/stores/builder-store";
+import { SlideCanvas, SlideExportFns } from "./slide-canvas";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes-warning";
 import { LaunchModal, CampaignData } from "@/components/builder/launch-modal";
 import { exportToStorage } from "@/lib/canvas/export-to-storage";
@@ -33,15 +38,22 @@ interface FranchiseeBuilderProps {
 export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
   const setTemplate = useBuilderStore((s) => s.setTemplate);
   const format = useBuilderStore(selectActiveFormat);
-  const activeFormatIndex = useBuilderStore((s) => s.activeFormatIndex);
-  const setActiveFormat = useBuilderStore((s) => s.setActiveFormat);
+  const activeSlide = useBuilderStore(selectActiveSlide);
+  const activeSlideIndex = useBuilderStore((s) => s.activeSlideIndex);
+  const setActiveSlideIndex = useBuilderStore((s) => s.setActiveSlideIndex);
   const layerSelections = useBuilderStore((s) => s.layerSelections);
   const setLayerSelection = useBuilderStore((s) => s.setLayerSelection);
-  const setCanvasReady = useBuilderStore((s) => s.setCanvasReady);
-  const isCanvasReady = useBuilderStore((s) => s.isCanvasReady);
+  const markSlideReady = useBuilderStore((s) => s.markSlideReady);
+  const allSlidesReady = useBuilderStore(selectAllSlidesReady);
   const setExporting = useBuilderStore((s) => s.setExporting);
   const isExporting = useBuilderStore((s) => s.isExporting);
   const [showLaunchModal, setShowLaunchModal] = useState(false);
+
+  // Registry of each slide's export functions (keyed by slide id).
+  const exportFnsRef = useRef<Record<string, SlideExportFns>>({});
+  const registerExport = useCallback((slideId: string, fns: SlideExportFns) => {
+    exportFnsRef.current[slideId] = fns;
+  }, []);
 
   // Init template
   useEffect(() => { setTemplate(template); }, [setTemplate]);
@@ -50,10 +62,12 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
   const defaultSelections = useMemo(() => {
     const d: Record<string, string> = {};
     for (const fmt of template.formats) {
-      for (const l of fmt.layers) {
-        if (!l.editable || !l.linkedBank) continue;
-        const v = l.type === "image" ? l.src : l.text;
-        if (v) d[l.id] = v;
+      for (const slide of fmt.slides) {
+        for (const l of slide.layers) {
+          if (!l.editable || !l.linkedBank) continue;
+          const v = l.type === "image" ? l.src : l.text;
+          if (v) d[l.id] = v;
+        }
       }
     }
     return d;
@@ -62,8 +76,12 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
 
   // Canvas + zoom/pan
   const containerRef = useRef<HTMLDivElement>(null);
+  const slides = format?.slides ?? [];
   const canvasWidth = format?.width ?? 1080;
   const canvasHeight = format?.height ?? 1920;
+  const SLIDE_GAP = 48;
+  const rowWidth = slides.length * canvasWidth + Math.max(0, slides.length - 1) * SLIDE_GAP;
+  const rowHeight = canvasHeight;
 
   const [zoom, setZoom] = useState(0.4);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -71,24 +89,25 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
   const panStart = useRef({ x: 0, y: 0 });
   const panOrigin = useRef({ x: 0, y: 0 });
   const spaceHeld = useRef(false);
+  const didPanRef = useRef(false);
 
   const ZOOM_STEP = 0.05;
   const MIN_ZOOM = 0.1;
   const MAX_ZOOM = 3;
 
-  // Fit to view on mount / format change
+  // Fit to view: scale the whole slide row (width = N * canvasWidth + gaps) into the viewport.
   const fitToView = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     const padding = 80;
     const s = Math.min(
-      (el.clientWidth - padding * 2) / canvasWidth,
-      (el.clientHeight - padding * 2) / canvasHeight,
+      (el.clientWidth - padding * 2) / Math.max(1, rowWidth),
+      (el.clientHeight - padding * 2) / Math.max(1, rowHeight),
       1
     );
     setZoom(s);
     setPan({ x: 0, y: 0 });
-  }, [canvasWidth, canvasHeight]);
+  }, [rowWidth, rowHeight]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -127,6 +146,7 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
     if (e.button === 1 || spaceHeld.current || isBg) {
       e.preventDefault();
       isPanning.current = true;
+      didPanRef.current = false;
       panStart.current = { x: e.clientX, y: e.clientY };
       panOrigin.current = { ...pan };
       if (containerRef.current) containerRef.current.style.cursor = "grabbing";
@@ -135,15 +155,22 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning.current) return;
-    setPan({ x: panOrigin.current.x + (e.clientX - panStart.current.x), y: panOrigin.current.y + (e.clientY - panStart.current.y) });
+    const dx = e.clientX - panStart.current.x;
+    const dy = e.clientY - panStart.current.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) didPanRef.current = true;
+    setPan({ x: panOrigin.current.x + dx, y: panOrigin.current.y + dy });
   }, []);
 
   const onMouseUp = useCallback(() => {
     if (isPanning.current) { isPanning.current = false; if (containerRef.current) containerRef.current.style.cursor = spaceHeld.current ? "grab" : ""; }
   }, []);
 
-  const handleReady = useCallback(() => setCanvasReady(true), [setCanvasReady]);
-  const { canvasRef, exportPng, getBlob } = useCreativeCanvas({ format, layerSelections, onReady: handleReady });
+  const activeSlideLayers = useMemo(() => activeSlide?.layers ?? [], [activeSlide]);
+  const handleSlideClick = useCallback((index: number) => {
+    // Ignore clicks that came from a pan drag
+    if (didPanRef.current) { didPanRef.current = false; return; }
+    setActiveSlideIndex(index);
+  }, [setActiveSlideIndex]);
 
   // User
   const [userId, setUserId] = useState<string | null>(null);
@@ -151,28 +178,69 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
     if (document.cookie.match(/(?:^|; )dev-role=([^;]*)/)) setUserId("00000000-0000-0000-0000-000000000000");
   }, []);
 
+  // Collect blobs from all slides — used by publish + export-all.
+  const getAllSlideBlobs = useCallback(async (): Promise<Blob[]> => {
+    const out: Blob[] = [];
+    for (const slide of slides) {
+      const fns = exportFnsRef.current[slide.id];
+      if (!fns) throw new Error(`Slide "${slide.label ?? slide.id}" is not ready`);
+      const blob = await fns.getBlob();
+      if (!blob) throw new Error(`Failed to export slide "${slide.label ?? slide.id}"`);
+      out.push(blob);
+    }
+    return out;
+  }, [slides]);
+
+  // Export: triggers per-slide PNG downloads
+  const handleExportAll = useCallback(() => {
+    const formatName = format?.name ?? "creative";
+    slides.forEach((slide, i) => {
+      const fns = exportFnsRef.current[slide.id];
+      const suffix = slides.length > 1 ? `-slide${i + 1}` : "";
+      fns?.exportPng(`${template.slug}-${formatName}${suffix}.png`);
+    });
+  }, [slides, format, template.slug]);
+
   // Publish
   const handlePublish = useCallback(async (campaign: CampaignData) => {
     const formatName = format?.name ?? "creative";
-    exportPng(`${template.slug}-${formatName}.png`);
+    // Download each slide locally for the user
+    handleExportAll();
     if (userId) {
       try {
         setExporting(true);
-        const blob = await getBlob();
-        if (!blob) throw new Error("Failed to generate image");
-        const result = await exportToStorage({ blob, userId, templateId: template.id, templateSlug: template.slug, templateName: template.name, formatName, selections: layerSelections, campaign });
-        toast.success(result.metaAdId ? "Published to Meta Ads!" : "Campaign published!", { description: result.metaAdId ? "Ad created in PAUSED status." : "Creative exported and saved." });
-      } catch { toast.error("Failed to save campaign"); } finally { setExporting(false); }
-    } else { toast.success("Creative exported!"); }
+        const blobs = await getAllSlideBlobs();
+        const result = await exportToStorage({
+          blobs,
+          userId,
+          templateId: template.id,
+          templateSlug: template.slug,
+          templateName: template.name,
+          formatName,
+          selections: layerSelections,
+          campaign,
+        });
+        toast.success(result.metaAdId ? "Published to Meta Ads!" : "Campaign published!", {
+          description: result.metaAdId ? "Ad created in PAUSED status." : "Creative exported and saved.",
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Failed to save campaign";
+        toast.error(msg);
+      } finally {
+        setExporting(false);
+      }
+    } else {
+      toast.success("Creative exported!");
+    }
     setShowLaunchModal(false);
-  }, [exportPng, getBlob, format, userId, layerSelections, setExporting]);
+  }, [format, userId, layerSelections, setExporting, handleExportAll, getAllSlideBlobs, template.id, template.name, template.slug]);
 
-  // Editable layers for right panel: anything marked editable.
+  // Editable layers for right panel: anything marked editable on the active slide.
   // Text layers without a linkedBank are free-form (franchisee types their own).
-  const editableLayers = (format?.layers ?? []).filter(
+  const editableLayers = activeSlideLayers.filter(
     (l) => l.editable && (l.linkedBank || l.type === "text"),
   );
-  const sortedLayers = [...(format?.layers ?? [])].sort((a, b) => b.zIndex - a.zIndex);
+  const sortedLayers = [...activeSlideLayers].sort((a, b) => b.zIndex - a.zIndex);
 
   // Launch modal data — only bank-backed layers carry a linkedBank
   const editableLayersMeta = editableLayers
@@ -193,10 +261,10 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
         <div className="h-5 w-px bg-[#E0E0E0]" />
         <span className="text-[13px] tabular-nums text-[#A5A5A5] px-1">{Math.round(zoom * 100)}%</span>
         <div className="h-5 w-px bg-[#E0E0E0]" />
-        <button onClick={() => exportPng(`${template.slug}-${format?.name ?? "creative"}.png`)}
+        <button onClick={handleExportAll}
           className="flex items-center gap-1.5 rounded-xl bg-[#1A1A1A] px-5 py-2 text-[13px] font-semibold text-white hover:bg-[#333]">
           <Download className="h-3.5 w-3.5" />
-          Export
+          Export{slides.length > 1 ? ` (${slides.length})` : ""}
         </button>
       </div>
 
@@ -234,24 +302,33 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
         </div>
       </div>
 
-      {/* ── CENTER CANVAS (pannable + zoomable) ── */}
+      {/* ── CENTER CANVAS (pannable + zoomable) — N slides side-by-side ── */}
       <div ref={containerRef} data-viewport="bg"
         style={{ position: "absolute", left: 284, right: 324, top: 0, bottom: 0, overflow: "hidden" }}
         onWheel={onWheel} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
-        {/* Canvas centered with pan + zoom */}
+        {/* Slide row centered with pan + zoom */}
         <div data-viewport="bg" style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <div data-viewport="bg" style={{
-            width: canvasWidth, height: canvasHeight,
+            width: rowWidth, height: rowHeight,
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transformOrigin: "center",
+            display: "flex",
+            alignItems: "center",
+            gap: SLIDE_GAP,
           }}>
-            <div style={{
-              width: canvasWidth, height: canvasHeight,
-              borderRadius: 16, overflow: "hidden",
-              boxShadow: "0 0 0 1px rgba(0,0,0,0.04), 0 20px 60px rgba(0,0,0,0.10)",
-            }}>
-              <canvas ref={canvasRef} />
-            </div>
+            {format && slides.map((slide, i) => (
+              <SlideCanvas
+                key={slide.id}
+                slide={slide}
+                format={format}
+                layerSelections={layerSelections}
+                isActive={i === activeSlideIndex}
+                index={i}
+                onClick={() => handleSlideClick(i)}
+                onReady={() => markSlideReady(slide.id, true)}
+                registerExport={registerExport}
+              />
+            ))}
           </div>
         </div>
 
@@ -283,10 +360,17 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
         className="flex flex-col overflow-y-auto rounded-[32px] bg-white p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
 
         {/* Controls header */}
-        <h3 className="mb-4 flex items-center gap-2 text-[14px] font-semibold text-[#1A1A1A]">
-          <Settings2 className="h-4 w-4 text-[#A5A5A5]" />
-          Controls
-        </h3>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 text-[14px] font-semibold text-[#1A1A1A]">
+            <Settings2 className="h-4 w-4 text-[#A5A5A5]" />
+            Controls
+          </h3>
+          {slides.length > 1 && (
+            <span className="rounded-full bg-[#F4F4F4] px-2 py-0.5 text-[11px] font-medium text-[#666]">
+              Slide {activeSlideIndex + 1} of {slides.length}
+            </span>
+          )}
+        </div>
 
         {/* Editable layer dropdowns */}
         <div className="space-y-5 flex-1">
@@ -365,7 +449,7 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
         {/* Launch button */}
         <button
           onClick={() => setShowLaunchModal(true)}
-          disabled={!isCanvasReady}
+          disabled={!allSlidesReady}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1A1A1A] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#333] disabled:opacity-40"
         >
           <Rocket className="h-4 w-4" />

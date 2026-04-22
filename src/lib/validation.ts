@@ -53,6 +53,7 @@ export const submissionRules: ValidationRule[] = [
   { field: "template_id", required: true, type: "string" },
   { field: "format_name", required: true, type: "string", maxLength: 100 },
   { field: "file_url", required: true, type: "string", maxLength: 2048 },
+  { field: "slide_file_urls", type: "object" }, // array or null
   { field: "selections", required: true, type: "object" },
   { field: "campaign_start", type: "string" },
   { field: "campaign_end", type: "string" },

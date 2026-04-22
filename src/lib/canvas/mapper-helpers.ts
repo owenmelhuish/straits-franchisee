@@ -8,10 +8,12 @@ const EDITABLE_PROPS = {
   hasBorders: true,
   lockMovementX: false,
   lockMovementY: false,
-  cornerColor: "#4f46e5",
-  cornerStrokeColor: "#4f46e5",
-  borderColor: "#6366f1",
-  cornerSize: 8,
+  cornerColor: "#ffffff",
+  cornerStrokeColor: "#1A1A1A",
+  borderColor: "#1A1A1A",
+  borderScaleFactor: 2,
+  cornerSize: 14,
+  cornerStyle: "circle" as const,
   transparentCorners: false,
 };
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { Canvas as FabricCanvas, FabricImage, Textbox, Rect } from "fabric";
 import { TemplateLayer } from "@/types/template";
 import { createEditableFabricObject } from "@/lib/canvas/mapper-helpers";
+import { preloadCustomFonts } from "@/lib/canvas/fonts";
 import { useMapperStore } from "@/stores/mapper-store";
 
 export function useMapperCanvas() {
@@ -12,6 +13,14 @@ export function useMapperCanvas() {
   const initRef = useRef(false);
 
   const { updateLayer, setSelectedLayerId, getActiveFormat } = useMapperStore();
+
+  // Warm-load custom web fonts (Bebas Neue, etc.) so Fabric renders them correctly.
+  useEffect(() => {
+    preloadCustomFonts().then(() => {
+      // Force re-render once the font lands so any already-rendered Textbox picks it up.
+      fabricRef.current?.requestRenderAll();
+    });
+  }, []);
 
   // Initialize canvas
   useEffect(() => {
@@ -87,9 +96,9 @@ export function useMapperCanvas() {
       const isPreviewingItem =
         store.previewingLayerId === data.layerId && store.previewingBankItemId;
       if (isPreviewingItem) {
-        const layer = store.formats[store.activeFormatIndex]?.layers.find(
-          (l) => l.id === data.layerId,
-        );
+        const slide =
+          store.formats[store.activeFormatIndex]?.slides[store.activeSlideIndex];
+        const layer = slide?.layers.find((l) => l.id === data.layerId);
         if (layer?.linkedBank) {
           store.updateBankItem(layer.linkedBank, store.previewingBankItemId!, transform);
         }
@@ -222,7 +231,7 @@ export function useMapperCanvas() {
     useMapperStore.getState().removeLayer(id);
   }, []);
 
-  const loadFormatLayers = useCallback(async (layers: TemplateLayer[]) => {
+  const loadLayers = useCallback(async (layers: TemplateLayer[]) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
 
@@ -289,6 +298,7 @@ export function useMapperCanvas() {
         if (updates.fontWeight !== undefined) obj.set("fontWeight", updates.fontWeight as string);
         if (updates.fill !== undefined) obj.set("fill", updates.fill);
         if (updates.textAlign !== undefined) obj.set("textAlign", updates.textAlign);
+        if (updates.lineHeight !== undefined) obj.set("lineHeight", updates.lineHeight);
       }
 
       const padX = (canvas as unknown as { _artboardPad: number })._artboardPad ?? 0;
@@ -330,10 +340,12 @@ export function useMapperCanvas() {
             evented: true,
             hasControls: true,
             hasBorders: true,
-            cornerColor: "#4f46e5",
-            cornerStrokeColor: "#4f46e5",
-            borderColor: "#6366f1",
-            cornerSize: 8,
+            cornerColor: "#ffffff",
+            cornerStrokeColor: "#1A1A1A",
+            borderColor: "#1A1A1A",
+            borderScaleFactor: 2,
+            cornerSize: 14,
+            cornerStyle: "circle" as const,
             transparentCorners: false,
           });
           newImg.scaleToWidth(width);
@@ -437,7 +449,7 @@ export function useMapperCanvas() {
     addImageLayer,
     addTextBox,
     removeLayer,
-    loadFormatLayers,
+    loadLayers,
     resizeCanvas,
     updateCanvasObject,
     previewImageOnLayer,
@@ -468,10 +480,12 @@ function createEditableFabricObjectSync(layer: TemplateLayer) {
     hasBorders: true,
     lockMovementX: false,
     lockMovementY: false,
-    cornerColor: "#4f46e5",
-    cornerStrokeColor: "#4f46e5",
-    borderColor: "#6366f1",
-    cornerSize: 8,
+    cornerColor: "#ffffff",
+    cornerStrokeColor: "#1A1A1A",
+    borderColor: "#1A1A1A",
+    borderScaleFactor: 2,
+    cornerSize: 14,
+    cornerStyle: "circle" as const,
     transparentCorners: false,
   });
   textbox.set("data", { layerId: layer.id, type: layer.type });

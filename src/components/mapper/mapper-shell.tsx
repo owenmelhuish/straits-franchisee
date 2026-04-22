@@ -6,7 +6,7 @@ import { useMapperStore } from "@/stores/mapper-store";
 import { AssetPanel } from "./asset-panel";
 import { InteractiveCanvas } from "./interactive-canvas";
 import { PropertiesPanel } from "./properties-panel";
-import { TemplateLayer } from "@/types/template";
+import { TemplateLayer, createSlide } from "@/types/template";
 
 interface MapperShellProps {
   initialFormat?: {
@@ -23,12 +23,13 @@ export function MapperShell({ initialFormat }: MapperShellProps) {
     addImageLayer,
     addTextBox,
     removeLayer,
-    loadFormatLayers,
+    loadLayers,
     resizeCanvas,
     updateCanvasObject,
   } = useMapperCanvas();
 
   const formats = useMapperStore((s) => s.formats);
+  const activeSlideIndex = useMapperStore((s) => s.activeSlideIndex);
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -41,10 +42,11 @@ export function MapperShell({ initialFormat }: MapperShellProps) {
             label: initialFormat.label,
             width: initialFormat.width,
             height: initialFormat.height,
-            layers: [],
+            slides: [createSlide()],
           },
         ],
         activeFormatIndex: 0,
+        activeSlideIndex: 0,
       });
       resizeCanvas(initialFormat.width, initialFormat.height);
     }
@@ -53,10 +55,11 @@ export function MapperShell({ initialFormat }: MapperShellProps) {
   const handleFormatChange = useCallback(
     (index: number) => {
       const format = formats[index];
+      const slide = format.slides[activeSlideIndex] ?? format.slides[0];
       resizeCanvas(format.width, format.height);
-      loadFormatLayers(format.layers);
+      loadLayers(slide?.layers ?? []);
     },
-    [formats, resizeCanvas, loadFormatLayers]
+    [formats, activeSlideIndex, resizeCanvas, loadLayers]
   );
 
   const handleLayerUpdate = useCallback(

@@ -4,7 +4,11 @@ import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useCanvasScale } from "@/hooks/use-canvas-scale";
 import { useCreativeCanvas } from "@/hooks/use-creative-canvas";
-import { useBuilderStore, selectActiveFormat } from "@/stores/builder-store";
+import {
+  useBuilderStore,
+  selectActiveFormat,
+  selectActiveSlide,
+} from "@/stores/builder-store";
 import { BuilderLayout } from "@/components/layout/builder-layout";
 import { LayerPanel } from "./layer-panel";
 import { FormatSwitcher } from "./format-switcher";
@@ -24,8 +28,9 @@ interface BuilderViewProps {
 export function BuilderView({ template }: BuilderViewProps) {
   const setTemplate = useBuilderStore((s) => s.setTemplate);
   const format = useBuilderStore(selectActiveFormat);
+  const activeSlide = useBuilderStore(selectActiveSlide);
   const layerSelections = useBuilderStore((s) => s.layerSelections);
-  const setCanvasReady = useBuilderStore((s) => s.setCanvasReady);
+  const markSlideReady = useBuilderStore((s) => s.markSlideReady);
   const setExporting = useBuilderStore((s) => s.setExporting);
   const isExporting = useBuilderStore((s) => s.isExporting);
   const [userId, setUserId] = useState<string | null>(null);
@@ -34,10 +39,12 @@ export function BuilderView({ template }: BuilderViewProps) {
   const defaultSelections = useMemo(() => {
     const defaults: Record<string, string> = {};
     for (const fmt of template.formats) {
-      for (const layer of fmt.layers) {
-        if (!layer.editable || !layer.linkedBank) continue;
-        const value = layer.type === "image" ? layer.src : layer.text;
-        if (value) defaults[layer.id] = value;
+      for (const slide of fmt.slides) {
+        for (const layer of slide.layers) {
+          if (!layer.editable || !layer.linkedBank) continue;
+          const value = layer.type === "image" ? layer.src : layer.text;
+          if (value) defaults[layer.id] = value;
+        }
       }
     }
     return defaults;
@@ -53,12 +60,15 @@ export function BuilderView({ template }: BuilderViewProps) {
   const canvasHeight = format?.height ?? 1920;
   const { scale } = useCanvasScale(containerRef, canvasWidth, canvasHeight);
 
+  const activeSlideId = activeSlide?.id ?? null;
+  const activeSlideLayers = useMemo(() => activeSlide?.layers ?? [], [activeSlide]);
   const handleReady = useCallback(() => {
-    setCanvasReady(true);
-  }, [setCanvasReady]);
+    if (activeSlideId) markSlideReady(activeSlideId, true);
+  }, [activeSlideId, markSlideReady]);
 
   const { canvasRef, exportPng, getBlob } = useCreativeCanvas({
     format,
+    layers: activeSlideLayers,
     layerSelections,
     onReady: handleReady,
   });
@@ -85,7 +95,7 @@ export function BuilderView({ template }: BuilderViewProps) {
           const blob = await getBlob();
           if (!blob) throw new Error("Failed to generate image");
           const result = await exportToStorage({
-            blob,
+            blobs: [blob],
             userId,
             templateId: template.id,
             templateSlug: template.slug,
@@ -124,7 +134,7 @@ export function BuilderView({ template }: BuilderViewProps) {
     [exportPng, getBlob, format, template, userId, layerSelections, setExporting]
   );
 
-  const editableLayers = (format?.layers ?? [])
+  const editableLayers = activeSlideLayers
     .filter((l) => l.editable && l.linkedBank)
     .map((l) => ({ id: l.id, name: l.name, linkedBank: l.linkedBank }));
 

@@ -11,17 +11,20 @@ export interface TemplatePreviewHandle {
 
 interface TemplatePreviewProps {
   format: TemplateFormat | null;
+  slideIndex?: number;
 }
 
 export const TemplatePreview = forwardRef<TemplatePreviewHandle, TemplatePreviewProps>(
-  function TemplatePreview({ format }, ref) {
+  function TemplatePreview({ format, slideIndex = 0 }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasWidth = format?.width ?? 1080;
     const canvasHeight = format?.height ?? 1920;
     const { scale } = useCanvasScale(containerRef, canvasWidth, canvasHeight);
 
+    const layers = format?.slides[slideIndex]?.layers ?? [];
     const { canvasRef } = useCreativeCanvas({
       format,
+      layers,
       layerSelections: {},
       onReady: useCallback(() => {}, []),
     });

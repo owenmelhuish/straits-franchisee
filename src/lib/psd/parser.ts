@@ -1,6 +1,6 @@
 import { readPsd } from "ag-psd";
 import type { Layer } from "ag-psd";
-import { TemplateConfig, TemplateFormat, TemplateLayer } from "@/types/template";
+import { TemplateConfig, TemplateFormat, TemplateLayer, createSlide } from "@/types/template";
 import { mapPsdLayer, resetLayerCounter } from "./layer-mapper";
 import { extractLayerImages, uploadExtractedImages } from "./image-extractor";
 import { STANDARD_FORMATS } from "@/lib/constants";
@@ -93,7 +93,7 @@ export async function parsePsdToTemplateConfig(
         label: artboard.name || `Format ${idx + 1}`,
         width,
         height,
-        layers,
+        slides: [createSlide(layers)],
       };
     });
   } else {
@@ -114,13 +114,13 @@ export async function parsePsdToTemplateConfig(
         label: selectedStdFormat?.label ?? `Default (${psd.width}x${psd.height})`,
         width: selectedStdFormat?.width ?? psd.width,
         height: selectedStdFormat?.height ?? psd.height,
-        layers,
+        slides: [createSlide(layers)],
       },
     ];
   }
 
   // Compute stats
-  const allLayers = formats.flatMap((f) => f.layers);
+  const allLayers = formats.flatMap((f) => f.slides.flatMap((s) => s.layers));
   const stats: ParseStats = {
     totalLayers: allLayers.length,
     imagesExtracted: allLayers.filter((l) => l.type === "image" && l.src).length,

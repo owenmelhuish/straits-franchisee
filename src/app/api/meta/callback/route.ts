@@ -26,13 +26,14 @@ export async function GET(request: NextRequest) {
     // Exchange code for short-lived token
     const { access_token: shortToken } = await exchangeCodeForToken(code);
 
-    // Exchange for long-lived token (60 days)
+    // Exchange for long-lived token (60 days, or never-expiring for some app types)
     const { access_token: longToken, expires_in } =
       await exchangeForLongLivedToken(shortToken);
 
-    const expiresAt = new Date(
-      Date.now() + expires_in * 1000
-    ).toISOString();
+    // expires_in is omitted or 0 for tokens that don't expire — store null then
+    const expiresAt = expires_in
+      ? new Date(Date.now() + expires_in * 1000).toISOString()
+      : null;
 
     // Fetch ad accounts and pages
     const adAccounts = await fetchAdAccounts(longToken);

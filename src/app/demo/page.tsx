@@ -3,7 +3,12 @@
 import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useCreativeCanvas } from "@/hooks/use-creative-canvas";
-import { useBuilderStore, selectActiveFormat } from "@/stores/builder-store";
+import {
+  useBuilderStore,
+  selectActiveFormat,
+  selectActiveSlide,
+  selectAllSlidesReady,
+} from "@/stores/builder-store";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes-warning";
 import { LaunchModal, CampaignData } from "@/components/builder/launch-modal";
 import { exportToStorage } from "@/lib/canvas/export-to-storage";
@@ -31,12 +36,11 @@ const LAYER_ICONS: Record<string, typeof Image> = { image: Image, text: Type, re
 export default function DemoBuilderPage() {
   const setTemplate = useBuilderStore((s) => s.setTemplate);
   const format = useBuilderStore(selectActiveFormat);
-  const activeFormatIndex = useBuilderStore((s) => s.activeFormatIndex);
-  const setActiveFormat = useBuilderStore((s) => s.setActiveFormat);
+  const activeSlide = useBuilderStore(selectActiveSlide);
   const layerSelections = useBuilderStore((s) => s.layerSelections);
   const setLayerSelection = useBuilderStore((s) => s.setLayerSelection);
-  const setCanvasReady = useBuilderStore((s) => s.setCanvasReady);
-  const isCanvasReady = useBuilderStore((s) => s.isCanvasReady);
+  const markSlideReady = useBuilderStore((s) => s.markSlideReady);
+  const allSlidesReady = useBuilderStore(selectAllSlidesReady);
   const setExporting = useBuilderStore((s) => s.setExporting);
   const isExporting = useBuilderStore((s) => s.isExporting);
   const [showLaunchModal, setShowLaunchModal] = useState(false);
@@ -48,10 +52,12 @@ export default function DemoBuilderPage() {
   const defaultSelections = useMemo(() => {
     const d: Record<string, string> = {};
     for (const fmt of template.formats) {
-      for (const l of fmt.layers) {
-        if (!l.editable || !l.linkedBank) continue;
-        const v = l.type === "image" ? l.src : l.text;
-        if (v) d[l.id] = v;
+      for (const slide of fmt.slides) {
+        for (const l of slide.layers) {
+          if (!l.editable || !l.linkedBank) continue;
+          const v = l.type === "image" ? l.src : l.text;
+          if (v) d[l.id] = v;
+        }
       }
     }
     return d;
@@ -135,8 +141,17 @@ export default function DemoBuilderPage() {
     if (isPanning.current) { isPanning.current = false; if (containerRef.current) containerRef.current.style.cursor = spaceHeld.current ? "grab" : ""; }
   }, []);
 
-  const handleReady = useCallback(() => setCanvasReady(true), [setCanvasReady]);
-  const { canvasRef, exportPng, getBlob } = useCreativeCanvas({ format, layerSelections, onReady: handleReady });
+  const activeSlideId = activeSlide?.id ?? null;
+  const activeSlideLayers = useMemo(() => activeSlide?.layers ?? [], [activeSlide]);
+  const handleReady = useCallback(() => {
+    if (activeSlideId) markSlideReady(activeSlideId, true);
+  }, [activeSlideId, markSlideReady]);
+  const { canvasRef, exportPng, getBlob } = useCreativeCanvas({
+    format,
+    layers: activeSlideLayers,
+    layerSelections,
+    onReady: handleReady,
+  });
 
   // User
   const [userId, setUserId] = useState<string | null>(null);
@@ -153,16 +168,16 @@ export default function DemoBuilderPage() {
         setExporting(true);
         const blob = await getBlob();
         if (!blob) throw new Error("Failed to generate image");
-        const result = await exportToStorage({ blob, userId, templateId: template.id, templateSlug: template.slug, templateName: template.name, formatName, selections: layerSelections, campaign });
+        const result = await exportToStorage({ blobs: [blob], userId, templateId: template.id, templateSlug: template.slug, templateName: template.name, formatName, selections: layerSelections, campaign });
         toast.success(result.metaAdId ? "Published to Meta Ads!" : "Campaign published!", { description: result.metaAdId ? "Ad created in PAUSED status." : "Creative exported and saved." });
       } catch { toast.error("Failed to save campaign"); } finally { setExporting(false); }
     } else { toast.success("Creative exported!"); }
     setShowLaunchModal(false);
   }, [exportPng, getBlob, format, userId, layerSelections, setExporting]);
 
-  // Editable layers & banks for right panel
-  const editableLayers = (format?.layers ?? []).filter((l) => l.editable && l.linkedBank);
-  const sortedLayers = [...(format?.layers ?? [])].sort((a, b) => b.zIndex - a.zIndex);
+  // Editable layers & banks for right panel (active slide)
+  const editableLayers = activeSlideLayers.filter((l) => l.editable && l.linkedBank);
+  const sortedLayers = [...activeSlideLayers].sort((a, b) => b.zIndex - a.zIndex);
 
   // Launch modal data
   const editableLayersMeta = editableLayers.map((l) => ({ id: l.id, name: l.name, linkedBank: l.linkedBank }));
@@ -335,7 +350,7 @@ export default function DemoBuilderPage() {
         {/* Launch button */}
         <button
           onClick={() => setShowLaunchModal(true)}
-          disabled={!isCanvasReady}
+          disabled={!allSlidesReady}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1A1A1A] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#333] disabled:opacity-40"
         >
           <Rocket className="h-4 w-4" />

@@ -14,6 +14,7 @@ const FONT_OPTIONS = [
   "Verdana",
   "Impact",
   "Comic Sans MS",
+  "Bebas Neue",
 ];
 
 const WEIGHT_OPTIONS = [
@@ -233,6 +234,37 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
                   {align.charAt(0).toUpperCase() + align.slice(1)}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Line spacing — multiplier on font size (1.0 = tight, 1.5 = loose). */}
+          <div>
+            <label className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
+              <span>Line Spacing</span>
+              <span className="tabular-nums">{(layer.lineHeight ?? 1.2).toFixed(2)}</span>
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="range"
+                min={0.6}
+                max={3}
+                step={0.05}
+                value={layer.lineHeight ?? 1.2}
+                onChange={(e) => onUpdate(layer.id, { lineHeight: Number(e.target.value) })}
+                className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-[#E0E0E0] [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#1A1A1A]"
+              />
+              <input
+                type="number"
+                value={layer.lineHeight ?? 1.2}
+                min={0.6}
+                max={3}
+                step={0.05}
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  if (!Number.isNaN(v)) onUpdate(layer.id, { lineHeight: v });
+                }}
+                className="w-16 rounded-md border px-2 py-1 text-xs tabular-nums"
+              />
             </div>
           </div>
         </>

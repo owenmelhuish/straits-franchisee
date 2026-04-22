@@ -25,12 +25,18 @@ export interface TemplateLayer {
   zIndex: number;
 }
 
+export interface TemplateSlide {
+  id: string;
+  label?: string;
+  layers: TemplateLayer[];
+}
+
 export interface TemplateFormat {
   name: string;
   label: string;
   width: number;
   height: number;
-  layers: TemplateLayer[];
+  slides: TemplateSlide[];
 }
 
 export interface AssetBankItem {
@@ -65,4 +71,39 @@ export interface TemplateConfig {
   thumbnail: string;
   formats: TemplateFormat[];
   assetBanks: AssetBank[];
+}
+
+/**
+ * Create a new empty slide with a stable id.
+ */
+export function createSlide(layers: TemplateLayer[] = [], label?: string): TemplateSlide {
+  return {
+    id: crypto.randomUUID(),
+    label,
+    layers,
+  };
+}
+
+/**
+ * Normalize a possibly-legacy format object (which may have `layers` instead of `slides`)
+ * into the new shape. Safe to call on already-normalized formats.
+ */
+export function hydrateFormatSlides(fmt: unknown): TemplateFormat {
+  const f = fmt as Partial<TemplateFormat> & { layers?: TemplateLayer[] };
+  if (Array.isArray(f.slides) && f.slides.length > 0) {
+    return {
+      name: f.name!,
+      label: f.label!,
+      width: f.width!,
+      height: f.height!,
+      slides: f.slides,
+    };
+  }
+  return {
+    name: f.name!,
+    label: f.label!,
+    width: f.width!,
+    height: f.height!,
+    slides: [createSlide(f.layers ?? [])],
+  };
 }

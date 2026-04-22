@@ -2,26 +2,30 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { Canvas as FabricCanvas, FabricImage, Textbox } from "fabric";
-import { TemplateFormat } from "@/types/template";
+import { TemplateFormat, TemplateLayer } from "@/types/template";
 import { LayerSelections } from "@/types/builder";
-import { loadFormat } from "@/lib/canvas/template-loader";
+import { loadLayers } from "@/lib/canvas/template-loader";
 import { exportCanvasToPng, canvasToBlob } from "@/lib/canvas/export";
+import { preloadCustomFonts } from "@/lib/canvas/fonts";
 import { CANVAS_DEFAULTS } from "@/lib/constants";
 
 interface UseCreativeCanvasOptions {
   format: TemplateFormat | null;
+  layers: TemplateLayer[];
   layerSelections: LayerSelections;
   onReady?: () => void;
 }
 
 export function useCreativeCanvas({
   format,
+  layers,
   layerSelections,
   onReady,
 }: UseCreativeCanvasOptions) {
   const canvasElRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<FabricCanvas | null>(null);
-  const formatRef = useRef<TemplateFormat | null>(null);
+  const layersRef = useRef<TemplateLayer[] | null>(null);
+  const formatDimsRef = useRef<{ w: number; h: number } | null>(null);
   const selectionsRef = useRef<LayerSelections>(layerSelections);
 
   // Keep selections ref in sync
@@ -49,19 +53,37 @@ export function useCreativeCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load format when it changes
+  // (Re)load layers when the layers array or format dims change
   useEffect(() => {
     const canvas = fabricRef.current;
     if (!canvas || !format) return;
 
-    // Skip if same format
-    if (formatRef.current === format) return;
-    formatRef.current = format;
+    // Skip if nothing meaningful changed
+    const sameLayers = layersRef.current === layers;
+    const sameDims =
+      formatDimsRef.current?.w === format.width && formatDimsRef.current?.h === format.height;
+    if (sameLayers && sameDims) return;
 
-    loadFormat(canvas, format, selectionsRef.current).then(() => {
-      onReady?.();
+    layersRef.current = layers;
+    formatDimsRef.current = { w: format.width, h: format.height };
+
+    // Wait for custom web fonts to finish loading so text renders in the correct face.
+    // Use a cancel flag so that if the component unmounts (Fabric disposed) between
+    // scheduling and the async `then`, we don't call clear() / render on a dead canvas.
+    let cancelled = false;
+    preloadCustomFonts().then(() => {
+      if (cancelled) return;
+      if (fabricRef.current !== canvas) return; // canvas was recreated or disposed
+      loadLayers(canvas, format, layers, selectionsRef.current).then(() => {
+        if (cancelled) return;
+        if (fabricRef.current !== canvas) return;
+        onReady?.();
+      });
     });
-  }, [format, onReady]);
+    return () => {
+      cancelled = true;
+    };
+  }, [format, layers, onReady]);
 
   // Sync individual selection changes (without full reload)
   useEffect(() => {
@@ -85,7 +107,7 @@ export function useCreativeCanvas({
         const currentSrc = obj.getSrc();
         if (currentSrc !== selectedValue && !currentSrc.endsWith(selectedValue)) {
           // Need to replace the image
-          const layer = format.layers.find((l) => l.id === data.layerId);
+          const layer = layers.find((l) => l.id === data.layerId);
           if (layer) {
             FabricImage.fromURL(selectedValue, {
               crossOrigin: "anonymous",
@@ -117,7 +139,7 @@ export function useCreativeCanvas({
     }
 
     canvas.requestRenderAll();
-  }, [layerSelections, format]);
+  }, [layerSelections, format, layers]);
 
   const handleExport = useCallback((filename?: string) => {
     const canvas = fabricRef.current;
