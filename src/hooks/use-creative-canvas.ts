@@ -58,26 +58,29 @@ export function useCreativeCanvas({
     const canvas = fabricRef.current;
     if (!canvas || !format) return;
 
-    // Skip if nothing meaningful changed
+    // Skip if nothing meaningful changed — and we actually loaded these layers last time.
     const sameLayers = layersRef.current === layers;
     const sameDims =
       formatDimsRef.current?.w === format.width && formatDimsRef.current?.h === format.height;
     if (sameLayers && sameDims) return;
 
-    layersRef.current = layers;
-    formatDimsRef.current = { w: format.width, h: format.height };
-
-    // Wait for custom web fonts to finish loading so text renders in the correct face.
-    // Use a cancel flag so that if the component unmounts (Fabric disposed) between
-    // scheduling and the async `then`, we don't call clear() / render on a dead canvas.
+    // IMPORTANT: do not mark layersRef/formatDimsRef here. If this effect is cancelled
+    // (e.g. by a dep change firing another run before loadLayers finishes), the next
+    // run must still see the pending layers as "not loaded" and reload them. We set
+    // the refs only after loadLayers completes successfully.
     let cancelled = false;
     preloadCustomFonts().then(() => {
       if (cancelled) return;
-      if (fabricRef.current !== canvas) return; // canvas was recreated or disposed
+      if (fabricRef.current !== canvas) return;
       loadLayers(canvas, format, layers, selectionsRef.current).then(() => {
         if (cancelled) return;
         if (fabricRef.current !== canvas) return;
+        layersRef.current = layers;
+        formatDimsRef.current = { w: format.width, h: format.height };
         onReady?.();
+      }).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error("[useCreativeCanvas] loadLayers failed", err);
       });
     });
     return () => {
