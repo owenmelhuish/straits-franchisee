@@ -4,6 +4,7 @@ import { useRef, useState, useCallback, useEffect } from "react";
 import { useMapperStore } from "@/stores/mapper-store";
 import { FormatTabs } from "./format-tabs";
 import { Plus, Minus, Maximize } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 interface InteractiveCanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -15,6 +16,7 @@ const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.05;
 
 export function InteractiveCanvas({ canvasRef, onFormatChange }: InteractiveCanvasProps) {
+  const t = useT();
   const viewportRef = useRef<HTMLDivElement>(null);
   const format = useMapperStore((s) => s.formats[s.activeFormatIndex]);
 
@@ -135,7 +137,7 @@ export function InteractiveCanvas({ canvasRef, onFormatChange }: InteractiveCanv
             <Plus className="h-3.5 w-3.5" />
           </button>
           <div className="h-3.5 w-px bg-[#E0E0E0]" />
-          <button onClick={handleFit} className="rounded-lg p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A]" title="Fit to view">
+          <button onClick={handleFit} className="rounded-lg p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A]" title={t.builder.fitToView}>
             <Maximize className="h-3.5 w-3.5" />
           </button>
           <span className="min-w-[28px] text-center text-[11px] tabular-nums text-[#666666]">{Math.round(zoom * 100)}%</span>

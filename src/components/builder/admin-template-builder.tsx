@@ -18,6 +18,8 @@ import { TemplateRow, templateRowToConfig } from "@/types/database";
 import { STANDARD_FORMATS } from "@/lib/constants";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n/client";
+import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 import {
   ChevronLeft,
   Upload,
@@ -38,16 +40,17 @@ import {
 
 /* ─── Format selection screen (new template only) ─── */
 function FormatPicker({ onSelect }: { onSelect: (fmt: typeof STANDARD_FORMATS[number]) => void }) {
+  const t = useT();
   return (
     <div className="flex h-screen items-center justify-center" style={{ backgroundColor: "#F4F4F4", fontFamily: "Inter, system-ui, sans-serif" }}>
       <div className="w-full max-w-3xl rounded-[24px] bg-white p-10 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         <div className="mb-6">
           <Link href="/dashboard" className="inline-flex items-center gap-1 text-[13px] text-[#A5A5A5] hover:text-[#1A1A1A] transition-colors">
-            <ChevronLeft className="h-3.5 w-3.5" /> Back to dashboard
+            <ChevronLeft className="h-3.5 w-3.5" /> {t.templateCreator.backToDashboard}
           </Link>
         </div>
-        <h1 className="mb-2 text-center text-[16px] font-semibold text-[#1A1A1A]">Create New Template</h1>
-        <p className="mb-8 text-center text-[13px] text-[#666]">Select the ad format for this template</p>
+        <h1 className="mb-2 text-center text-[16px] font-semibold text-[#1A1A1A]">{t.templateCreator.createNewTemplate}</h1>
+        <p className="mb-8 text-center text-[13px] text-[#666]">{t.templateCreator.selectFormat}</p>
         <div className="grid grid-cols-4 gap-4">
           {STANDARD_FORMATS.map((fmt) => {
             const aspect = fmt.width / fmt.height;
@@ -74,6 +77,7 @@ function FormatPicker({ onSelect }: { onSelect: (fmt: typeof STANDARD_FORMATS[nu
 
 /* ─── Top-level — picker for new, fetch+hydrate for edit ─── */
 export function AdminTemplateBuilder({ templateId }: { templateId?: string } = {}) {
+  const t = useT();
   const [selectedFormat, setSelectedFormat] = useState<typeof STANDARD_FORMATS[number] | null>(null);
   const [editRow, setEditRow] = useState<TemplateRow | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -84,19 +88,19 @@ export function AdminTemplateBuilder({ templateId }: { templateId?: string } = {
     let cancelled = false;
     fetch(`/api/templates/${templateId}`)
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to load template");
+        if (!res.ok) throw new Error(t.templateCreator.failedToLoad);
         return res.json();
       })
       .then((data: TemplateRow) => {
         if (!cancelled) setEditRow(data);
       })
       .catch((err) => {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : "Failed to load template");
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : t.templateCreator.failedToLoad);
       });
     return () => {
       cancelled = true;
     };
-  }, [templateId]);
+  }, [templateId, t]);
 
   if (templateId) {
     if (loadError) {
@@ -111,7 +115,7 @@ export function AdminTemplateBuilder({ templateId }: { templateId?: string } = {
     if (!editRow) {
       return (
         <div className="flex h-screen items-center justify-center" style={{ backgroundColor: "#F4F4F4" }}>
-          <p className="text-[13px] text-[#A5A5A5]">Loading template…</p>
+          <p className="text-[13px] text-[#A5A5A5]">{t.templateCreator.loadingTemplate}</p>
         </div>
       );
     }
@@ -132,6 +136,7 @@ function isEditMode(p: BuilderProps): p is Extract<BuilderProps, { mode: "edit" 
 }
 
 function TemplateBuilder(props: BuilderProps) {
+  const t = useT();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -378,7 +383,7 @@ function TemplateBuilder(props: BuilderProps) {
     name, slug, description, thumbnail,
     formats, assetBanks: useMapperStore.getState().assetBanks,
   };
-  const validationIssues = computeValidationIssues(config);
+  const validationIssues = computeValidationIssues(config, t);
   const hasErrors = hasBlockingErrors(validationIssues);
 
   async function handleGenerateThumbnail() {
@@ -386,7 +391,7 @@ function TemplateBuilder(props: BuilderProps) {
     setError(null);
     try {
       const dataUrl = captureArtboard();
-      if (!dataUrl) throw new Error("Could not capture canvas");
+      if (!dataUrl) throw new Error(t.templateCreator.couldNotCaptureCanvas);
       const blob = await (await fetch(dataUrl)).blob();
       const safeSlug = slug || "template";
       const formData = new FormData();
@@ -394,12 +399,12 @@ function TemplateBuilder(props: BuilderProps) {
       formData.append("bucket", "templates");
       formData.append("path", `thumbnails/${safeSlug}-${Date.now()}.png`);
       const res = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Thumbnail upload failed");
+      if (!res.ok) throw new Error(t.templateCreator.thumbnailUploadFailed);
       const { url } = await res.json();
       setThumbnail(url);
-      toast.success("Thumbnail captured");
+      toast.success(t.templateCreator.thumbnailCaptured);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Thumbnail failed";
+      const msg = err instanceof Error ? err.message : t.templateCreator.thumbnailFailed;
       setError(msg);
       toast.error(msg);
     } finally {
@@ -409,13 +414,13 @@ function TemplateBuilder(props: BuilderProps) {
 
   async function handleSave(status: "draft" | "active" | "archived") {
     if (!name.trim() || !slug.trim()) {
-      setError("Name and slug are required");
-      toast.error("Name and slug are required");
+      setError(t.templateCreator.nameSlugRequired);
+      toast.error(t.templateCreator.nameSlugRequired);
       return;
     }
     if (status === "active" && hasErrors) {
-      setError("Fix validation errors before publishing");
-      toast.error("Fix validation errors before publishing");
+      setError(t.templateCreator.fixErrorsBeforePublish);
+      toast.error(t.templateCreator.fixErrorsBeforePublish);
       return;
     }
     setSaving(true);
@@ -440,21 +445,21 @@ function TemplateBuilder(props: BuilderProps) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Save failed (${res.status})`);
+        throw new Error(data.error || `${t.templateCreator.saveFailed} (${res.status})`);
       }
       const updated: TemplateRow = await res.json();
 
       const verb =
-        status === "active" ? "Published" :
-        status === "archived" ? "Archived" :
-        "Draft saved";
+        status === "active" ? t.templateCreator.published :
+        status === "archived" ? t.templateCreator.archived :
+        t.templateCreator.draftSaved;
       toast.success(verb);
 
       if (!isEdit) {
         router.push(`/template-creator?id=${updated.id}`);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Save failed";
+      const msg = err instanceof Error ? err.message : t.templateCreator.saveFailed;
       setError(msg);
       toast.error(msg);
     } finally {
@@ -481,22 +486,26 @@ function TemplateBuilder(props: BuilderProps) {
               <button
                 onClick={() => setActiveSlideIndex(i)}
                 onDoubleClick={() => {
-                  const next = window.prompt("Rename slide", s.label ?? `Slide ${i + 1}`);
+                  const fallback = t.templateCreator.slideFallback.replace("{n}", String(i + 1));
+                  const next = window.prompt(t.templateCreator.renameSlide, s.label ?? fallback);
                   if (next !== null && next.trim()) renameSlide(activeFormatIndex, i, next.trim());
                 }}
                 className={`rounded-lg px-2.5 py-1 text-[12px] font-medium transition-colors ${
                   isActive ? "bg-[#1A1A1A] text-white" : "text-[#666] hover:bg-[#F4F4F4]"
                 }`}
-                title={`${s.label ?? `Slide ${i + 1}`} — double-click to rename`}
+                title={t.templateCreator.slideHint.replace(
+                  "{label}",
+                  s.label ?? t.templateCreator.slideFallback.replace("{n}", String(i + 1))
+                )}
               >
-                {s.label ?? `Slide ${i + 1}`}
+                {s.label ?? t.templateCreator.slideFallback.replace("{n}", String(i + 1))}
               </button>
               {isActive && (
                 <div className="flex items-center gap-0.5 ml-1">
                   <button
                     onClick={() => i > 0 && reorderSlides(activeFormatIndex, i, i - 1)}
                     disabled={i === 0}
-                    title="Move slide left"
+                    title={t.templateCreator.moveSlideLeft}
                     className="rounded p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A] disabled:opacity-30"
                   >
                     <ChevronUp className="h-3 w-3 -rotate-90" />
@@ -504,7 +513,7 @@ function TemplateBuilder(props: BuilderProps) {
                   <button
                     onClick={() => i < activeFormat.slides.length - 1 && reorderSlides(activeFormatIndex, i, i + 1)}
                     disabled={i === activeFormat.slides.length - 1}
-                    title="Move slide right"
+                    title={t.templateCreator.moveSlideRight}
                     className="rounded p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A] disabled:opacity-30"
                   >
                     <ChevronDown className="h-3 w-3 -rotate-90" />
@@ -512,7 +521,7 @@ function TemplateBuilder(props: BuilderProps) {
                   <button
                     onClick={() => duplicateSlide(activeFormatIndex, i)}
                     disabled={atMax}
-                    title="Duplicate slide"
+                    title={t.templateCreator.duplicateSlide}
                     className="rounded p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A] disabled:opacity-30"
                   >
                     <Copy className="h-3 w-3" />
@@ -520,7 +529,7 @@ function TemplateBuilder(props: BuilderProps) {
                   <button
                     onClick={() => canDelete && removeSlide(activeFormatIndex, i)}
                     disabled={!canDelete}
-                    title={canDelete ? "Delete slide" : "Can't delete the only slide"}
+                    title={canDelete ? t.templateCreator.deleteSlide : t.templateCreator.cantDeleteOnlySlide}
                     className="rounded p-1 text-[#A5A5A5] hover:bg-red-50 hover:text-red-500 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-[#A5A5A5]"
                   >
                     <X className="h-3 w-3" />
@@ -534,11 +543,11 @@ function TemplateBuilder(props: BuilderProps) {
         <button
           onClick={() => addSlide(activeFormatIndex)}
           disabled={activeFormat.slides.length >= 10}
-          title={activeFormat.slides.length >= 10 ? "Max 10 slides" : "Add slide"}
+          title={activeFormat.slides.length >= 10 ? t.templateCreator.maxSlides : t.templateCreator.addSlide}
           className="flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-medium text-[#1A1A1A] hover:bg-[#F4F4F4] disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <Plus className="h-3 w-3" />
-          Add
+          {t.templateCreator.add}
         </button>
       </div>
 
@@ -576,7 +585,11 @@ function TemplateBuilder(props: BuilderProps) {
               currentStatus === "archived" ? "bg-gray-100 text-gray-600" :
               "bg-yellow-100 text-yellow-700"
             }`}>
-              {currentStatus}
+              {currentStatus === "active"
+                ? t.adminTemplates.statusActive
+                : currentStatus === "archived"
+                ? t.adminTemplates.statusArchived
+                : t.adminTemplates.statusDraft}
             </span>
           </>
         )}
@@ -587,24 +600,24 @@ function TemplateBuilder(props: BuilderProps) {
         className="flex flex-col overflow-hidden rounded-[32px] bg-white shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         <div className="p-6 pb-4">
           <Link href="/dashboard" className="mb-3 inline-flex items-center gap-1 text-[13px] text-[#A5A5A5] hover:text-[#1A1A1A] transition-colors">
-            <ChevronLeft className="h-3.5 w-3.5" /> Back
+            <ChevronLeft className="h-3.5 w-3.5" /> {t.builder.back}
           </Link>
-          <h2 className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5] mt-4 mb-3">Layers</h2>
+          <h2 className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5] mt-4 mb-3">{t.builder.layers}</h2>
           <div className="flex gap-2">
             <button onClick={() => fileInputRef.current?.click()}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] hover:border-[#D1D1D1] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)] transition-all">
-              <Upload className="h-3.5 w-3.5" /> Image
+              <Upload className="h-3.5 w-3.5" /> {t.templateCreator.image}
             </button>
             <button onClick={() => addTextBox("Headline")}
               className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] hover:border-[#D1D1D1] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)] transition-all">
-              <TypeIcon className="h-3.5 w-3.5" /> Text
+              <TypeIcon className="h-3.5 w-3.5" /> {t.templateCreator.text}
             </button>
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-1">
-          {layers.length === 0 && <p className="px-2 py-8 text-center text-[13px] text-[#A5A5A5]">Upload an image or add text to start.</p>}
+          {layers.length === 0 && <p className="px-2 py-8 text-center text-[13px] text-[#A5A5A5]">{t.builder.layersEmpty}</p>}
           {layers.map((layer, index) => {
             const Icon = LAYER_ICONS[layer.type] || Square;
             return (
@@ -667,7 +680,7 @@ function TemplateBuilder(props: BuilderProps) {
             <button
               onClick={() => addSlide(activeFormatIndex)}
               disabled={activeFormat.slides.length >= 10}
-              title={activeFormat.slides.length >= 10 ? "Max 10 slides" : "Add slide"}
+              title={activeFormat.slides.length >= 10 ? t.templateCreator.maxSlides : t.templateCreator.addSlide}
               style={{
                 width: PLUS_SIZE,
                 height: PLUS_SIZE,
@@ -687,7 +700,7 @@ function TemplateBuilder(props: BuilderProps) {
               }}
             >
               <Plus style={{ width: 56, height: 56 }} />
-              <span style={{ fontSize: 28, fontWeight: 600 }}>Add slide</span>
+              <span style={{ fontSize: 28, fontWeight: 600 }}>{t.templateCreator.addSlide}</span>
             </button>
 
             {/*
@@ -732,7 +745,8 @@ function TemplateBuilder(props: BuilderProps) {
                     fontSize: 18, fontWeight: 600, letterSpacing: 0.2,
                     pointerEvents: "none", zIndex: 2,
                   }}>
-                    {activeFormat.slides[activeSlideIndex]?.label ?? `Slide ${activeSlideIndex + 1}`}
+                    {activeFormat.slides[activeSlideIndex]?.label ??
+                      t.templateCreator.slideFallback.replace("{n}", String(activeSlideIndex + 1))}
                   </div>
                 </div>
               );
@@ -748,7 +762,7 @@ function TemplateBuilder(props: BuilderProps) {
             className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-[#E0E0E0] [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#1A1A1A]" />
           <button onClick={() => setZoom((z) => Math.min(z + ZOOM_STEP * 2, MAX_ZOOM))} className="rounded-lg p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A]"><Plus className="h-3.5 w-3.5" /></button>
           <div className="h-3.5 w-px bg-[#E0E0E0]" />
-          <button onClick={fitToView} title="Fit to view" className="rounded-lg p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A]"><Maximize className="h-3.5 w-3.5" /></button>
+          <button onClick={fitToView} title={t.builder.fitToView} className="rounded-lg p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A]"><Maximize className="h-3.5 w-3.5" /></button>
           <span className="min-w-[28px] text-center text-[11px] tabular-nums text-[#666]">{Math.round(zoom * 100)}%</span>
         </div>
       </div>
@@ -760,20 +774,20 @@ function TemplateBuilder(props: BuilderProps) {
 
           {/* Template info */}
           <div className="space-y-3">
-            <h3 className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5]">Template Info</h3>
+            <h3 className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5]">{t.templateCreator.templateInfo}</h3>
             <div>
-              <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">Name</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Spring Campaign"
+              <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">{t.templateCreator.name}</label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={t.templateCreator.namePlaceholder}
                 className="w-full rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] placeholder:text-[#A5A5A5] focus:border-[#D1D1D1] focus:outline-none" />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">Slug</label>
-              <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="e.g. spring-campaign"
+              <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">{t.templateCreator.slug}</label>
+              <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} placeholder={t.templateCreator.slugPlaceholder}
                 className="w-full rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] placeholder:text-[#A5A5A5] focus:border-[#D1D1D1] focus:outline-none" />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">Description</label>
-              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Template description..." rows={2}
+              <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">{t.templateCreator.description}</label>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t.templateCreator.descriptionPlaceholder} rows={2}
                 className="w-full rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] placeholder:text-[#A5A5A5] focus:border-[#D1D1D1] focus:outline-none resize-none" />
             </div>
           </div>
@@ -809,7 +823,7 @@ function TemplateBuilder(props: BuilderProps) {
               )}
             </>
           ) : (
-            <p className="text-[13px] text-[#A5A5A5]">Select a layer on the canvas to edit its properties.</p>
+            <p className="text-[13px] text-[#A5A5A5]">{t.templateCreator.selectLayerHint}</p>
           )}
 
           {/* Validation + thumbnail (edit mode only) */}
@@ -825,13 +839,13 @@ function TemplateBuilder(props: BuilderProps) {
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] hover:border-[#D1D1D1] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)] disabled:opacity-40 transition-all"
                 >
                   <Camera className="h-3.5 w-3.5" />
-                  {thumbBusy ? "Capturing..." : "Generate Thumbnail"}
+                  {thumbBusy ? t.templateCreator.capturing : t.templateCreator.generateThumbnail}
                 </button>
                 {thumbnail && (
                   <div className="flex items-center gap-2 text-[11px] text-[#A5A5A5]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={thumbnail} alt="Thumbnail" className="h-8 w-8 rounded border object-cover" />
-                    Thumbnail set
+                    <img src={thumbnail} alt={t.templateCreator.generateThumbnail} className="h-8 w-8 rounded border object-cover" />
+                    {t.templateCreator.thumbnailSet}
                   </div>
                 )}
               </div>
@@ -846,25 +860,25 @@ function TemplateBuilder(props: BuilderProps) {
           <div className="flex gap-2">
             <button onClick={() => handleSave("draft")} disabled={saving}
               className="flex-1 rounded-xl border border-[#E0E0E0] bg-white px-3 py-2.5 text-[13px] font-medium text-[#1A1A1A] hover:border-[#D1D1D1] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)] disabled:opacity-40 transition-all">
-              {saving ? "Saving..." : "Save Draft"}
+              {saving ? t.templateCreator.saving : t.templateCreator.saveDraft}
             </button>
             {currentStatus !== "active" ? (
               <button
                 onClick={() => handleSave("active")}
                 disabled={saving || hasErrors}
-                title={hasErrors ? "Fix validation errors before publishing" : undefined}
+                title={hasErrors ? t.templateCreator.fixErrorsBeforePublish : undefined}
                 className="flex-1 rounded-xl bg-[#1A1A1A] px-3 py-2.5 text-[13px] font-semibold text-white hover:bg-[#333] disabled:opacity-40 transition-all"
               >
-                {saving ? "Publishing..." : "Publish"}
+                {saving ? t.templateCreator.publishing : t.templateCreator.publish}
               </button>
             ) : (
               <button
                 onClick={() => handleSave("active")}
                 disabled={saving || hasErrors}
-                title={hasErrors ? "Fix validation errors before publishing" : undefined}
+                title={hasErrors ? t.templateCreator.fixErrorsBeforePublish : undefined}
                 className="flex-1 rounded-xl bg-[#1A1A1A] px-3 py-2.5 text-[13px] font-semibold text-white hover:bg-[#333] disabled:opacity-40 transition-all"
               >
-                {saving ? "Saving..." : "Update"}
+                {saving ? t.templateCreator.saving : t.templateCreator.update}
               </button>
             )}
           </div>
@@ -875,7 +889,7 @@ function TemplateBuilder(props: BuilderProps) {
               className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[12px] text-[#666] hover:border-[#D1D1D1] disabled:opacity-40 transition-all"
             >
               <Archive className="h-3.5 w-3.5" />
-              Archive
+              {t.templateCreator.archive}
             </button>
           )}
         </div>

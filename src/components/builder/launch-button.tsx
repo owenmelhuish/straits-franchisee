@@ -3,12 +3,14 @@
 import { Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBuilderStore, selectAllSlidesReady } from "@/stores/builder-store";
+import { useT } from "@/lib/i18n/client";
 
 interface LaunchButtonProps {
   onClick: () => void;
 }
 
 export function LaunchButton({ onClick }: LaunchButtonProps) {
+  const t = useT();
   const allSlidesReady = useBuilderStore(selectAllSlidesReady);
 
   return (
@@ -19,7 +21,7 @@ export function LaunchButton({ onClick }: LaunchButtonProps) {
       size="lg"
     >
       <Rocket className="mr-2 h-4 w-4" />
-      Launch
+      {t.builder.launch}
     </Button>
   );
 }

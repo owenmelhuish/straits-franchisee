@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useMapperStore } from "@/stores/mapper-store";
 import { TemplateLayer } from "@/types/template";
 import { Plus, Trash2, Upload } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 const FONT_OPTIONS = [
   "Arial",
@@ -17,13 +18,7 @@ const FONT_OPTIONS = [
   "Bebas Neue",
 ];
 
-const WEIGHT_OPTIONS = [
-  { label: "Normal", value: "normal" },
-  { label: "Bold", value: "bold" },
-  { label: "Light", value: "300" },
-  { label: "Semi-Bold", value: "600" },
-  { label: "Extra Bold", value: "800" },
-];
+const WEIGHT_OPTION_VALUES = ["normal", "bold", "300", "600", "800"] as const;
 
 interface LayerPropertiesFormProps {
   layer: TemplateLayer;
@@ -33,6 +28,19 @@ interface LayerPropertiesFormProps {
 }
 
 export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPropertiesFormProps) {
+  const t = useT();
+  const weightLabel = (value: string): string => {
+    switch (value) {
+      case "normal": return t.mapper.weights.normal;
+      case "bold": return t.mapper.weights.bold;
+      case "300": return t.mapper.weights.light;
+      case "600": return t.mapper.weights.semiBold;
+      case "800": return t.mapper.weights.extraBold;
+      default: return value;
+    }
+  };
+  const alignLabel = (a: "left" | "center" | "right"): string =>
+    a === "left" ? t.mapper.align.left : a === "center" ? t.mapper.align.center : t.mapper.align.right;
   const { assetBanks, addAssetBank, addBankItem, removeBankItem } = useMapperStore();
   const [showCreateBank, setShowCreateBank] = useState(false);
   const [newBankName, setNewBankName] = useState("");
@@ -121,12 +129,12 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        Layer Properties
+        {t.mapper.layerProperties}
       </h3>
 
       {/* Name */}
       <div>
-        <label className="mb-1 block text-xs font-medium text-muted-foreground">Name</label>
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">{t.mapper.name}</label>
         <input
           type="text"
           value={layer.name}
@@ -140,7 +148,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
         <>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Default Text
+              {t.mapper.defaultText}
             </label>
             <input
               type="text"
@@ -152,7 +160,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Font</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">{t.mapper.font}</label>
               <select
                 value={layer.fontFamily || "Arial"}
                 onChange={(e) => onUpdate(layer.id, { fontFamily: e.target.value })}
@@ -167,16 +175,16 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Weight
+                {t.mapper.weight}
               </label>
               <select
                 value={layer.fontWeight || "normal"}
                 onChange={(e) => onUpdate(layer.id, { fontWeight: e.target.value })}
                 className="w-full rounded-md border px-2 py-1.5 text-sm"
               >
-                {WEIGHT_OPTIONS.map((w) => (
-                  <option key={w.value} value={w.value}>
-                    {w.label}
+                {WEIGHT_OPTION_VALUES.map((w) => (
+                  <option key={w} value={w}>
+                    {weightLabel(w)}
                   </option>
                 ))}
               </select>
@@ -186,7 +194,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">
-                Font Size
+                {t.mapper.fontSize}
               </label>
               <input
                 type="number"
@@ -198,7 +206,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">Color</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">{t.mapper.color}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -218,7 +226,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
 
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Text Align
+              {t.mapper.textAlign}
             </label>
             <div className="flex gap-1">
               {(["left", "center", "right"] as const).map((align) => (
@@ -231,7 +239,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
                       : "hover:bg-muted"
                   }`}
                 >
-                  {align.charAt(0).toUpperCase() + align.slice(1)}
+                  {alignLabel(align)}
                 </button>
               ))}
             </div>
@@ -240,7 +248,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
           {/* Line spacing — multiplier on font size (1.0 = tight, 1.5 = loose). */}
           <div>
             <label className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
-              <span>Line Spacing</span>
+              <span>{t.mapper.lineSpacing}</span>
               <span className="tabular-nums">{(layer.lineHeight ?? 1.2).toFixed(2)}</span>
             </label>
             <div className="flex items-center gap-2">
@@ -273,7 +281,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
       {/* Image-specific display */}
       {layer.type === "image" && layer.src && (
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">Preview</label>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">{t.mapper.preview}</label>
           <img
             src={layer.src}
             alt={layer.name}
@@ -288,7 +296,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
 
       {/* Editable toggle */}
       <div className="flex items-center justify-between">
-        <label className="text-xs font-medium text-muted-foreground">Editable by franchisee</label>
+        <label className="text-xs font-medium text-muted-foreground">{t.mapper.editableByFranchisee}</label>
         <button
           onClick={() => onUpdate(layer.id, { editable: !layer.editable })}
           className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
@@ -310,7 +318,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
       {layer.editable && layer.type === "text" && (
         <div>
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
-            Input mode
+            {t.mapper.inputMode}
           </label>
           <div className="flex gap-1 rounded-lg bg-muted/40 p-1">
             <button
@@ -324,7 +332,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
                   : "text-muted-foreground hover:text-[#1A1A1A]"
               }`}
             >
-              Free form
+              {t.mapper.freeForm}
             </button>
             <button
               onClick={() => {
@@ -339,12 +347,12 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
                   : "text-muted-foreground hover:text-[#1A1A1A]"
               }`}
             >
-              From bank
+              {t.mapper.fromBank}
             </button>
           </div>
           {!textInBankMode && (
             <p className="mt-1.5 text-[10px] text-muted-foreground">
-              Franchisees type their own text, using the styling you set above.
+              {t.mapper.freeFormHint}
             </p>
           )}
         </div>
@@ -355,7 +363,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Linked Bank
+              {t.mapper.linkedBank}
             </label>
             <select
               value={layer.linkedBank || ""}
@@ -364,7 +372,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
               }
               className="w-full rounded-md border px-2 py-1.5 text-sm"
             >
-              <option value="">None</option>
+              <option value="">{t.mapper.none}</option>
               {compatibleBanks.map((bank) => (
                 <option key={bank.id} value={bank.name}>
                   {bank.name}
@@ -384,24 +392,24 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
                   }}
                   className="flex items-center gap-1 text-xs text-primary hover:underline"
                 >
-                  <Plus className="h-3 w-3" /> Create & link a new bank
+                  <Plus className="h-3 w-3" /> {t.mapper.createLinkBank}
                 </button>
               ) : (
                 <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 space-y-2">
-                  <p className="text-xs font-medium text-indigo-700">New Bank</p>
+                  <p className="text-xs font-medium text-indigo-700">{t.mapper.newBank}</p>
                   <input
                     type="text"
                     value={newBankName}
                     onChange={(e) => setNewBankName(e.target.value)}
-                    placeholder="Bank name"
+                    placeholder={t.mapper.bankName}
                     className="w-full rounded-md border px-2.5 py-1.5 text-sm"
                     autoFocus
                     onKeyDown={(e) => e.key === "Enter" && handleCreateBank()}
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    Type: {layer.type === "image" ? "image" : "text"}
+                    Type: {layer.type === "image" ? t.mapper.typeImage : t.mapper.typeText}
                     {(layer.type === "text" && layer.text) || (layer.type === "image" && layer.src)
-                      ? ` · Current value will be added as first item`
+                      ? ` · ${t.mapper.bankItemsHint}`
                       : ""}
                   </p>
                   <div className="flex gap-2">
@@ -410,13 +418,13 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
                       disabled={!newBankName.trim()}
                       className="rounded-md bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                     >
-                      Create & Link
+                      {t.mapper.createLink}
                     </button>
                     <button
                       onClick={() => setShowCreateBank(false)}
                       className="rounded-md border px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
                     >
-                      Cancel
+                      {t.mapper.cancel}
                     </button>
                   </div>
                 </div>
@@ -429,12 +437,12 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
             <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium text-muted-foreground">
-                  Bank Items ({linkedBank.items.length})
+                  {t.mapper.bankItems} ({linkedBank.items.length})
                 </p>
               </div>
 
               {linkedBank.items.length === 0 && (
-                <p className="text-[10px] text-muted-foreground italic">No items yet</p>
+                <p className="text-[10px] text-muted-foreground italic">{t.mapper.noItemsYet}</p>
               )}
 
               {linkedBank.items.map((item) => (
@@ -447,7 +455,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
                     />
                   ) : null}
                   <span className="flex-1 truncate text-xs">
-                    {item.label || item.value || "Untitled"}
+                    {item.label || item.value || t.mapper.untitled}
                   </span>
                   <button
                     onClick={() => removeBankItem(linkedBank.name, item.id)}
@@ -465,7 +473,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
                     type="text"
                     value={newItemValue}
                     onChange={(e) => setNewItemValue(e.target.value)}
-                    placeholder="Add text option..."
+                    placeholder={t.mapper.addTextOption}
                     className="flex-1 rounded border px-2 py-1 text-xs"
                     onKeyDown={(e) => e.key === "Enter" && handleAddItem()}
                   />
@@ -479,7 +487,7 @@ export function LayerPropertiesForm({ layer, onUpdate, hideBankItems }: LayerPro
                 </div>
               ) : (
                 <label className="flex cursor-pointer items-center gap-1 text-xs text-primary hover:underline">
-                  <Upload className="h-3 w-3" /> Upload image
+                  <Upload className="h-3 w-3" /> {t.mapper.uploadImage}
                   <input
                     type="file"
                     accept="image/*"

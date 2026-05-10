@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, LayoutDashboard, Shield, History, ArrowLeftRight, Settings, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LocaleToggle } from "@/components/locale-toggle";
+import { useT } from "@/lib/i18n/client";
 
 interface DashboardNavProps {
   userName: string;
@@ -12,6 +14,7 @@ interface DashboardNavProps {
 
 export function DashboardNav({ userName, isAdmin }: DashboardNavProps) {
   const router = useRouter();
+  const t = useT();
 
   function handleSwitchRole() {
     const newRole = isAdmin ? "franchisee" : "admin";
@@ -30,7 +33,7 @@ export function DashboardNav({ userName, isAdmin }: DashboardNavProps) {
     <nav className="mx-4 mt-4 flex h-12 items-center justify-between rounded-2xl bg-white px-5 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
       <div className="flex items-center gap-5">
         <Link href="/" className="text-[15px] font-semibold tracking-tight text-[#1A1A1A]">
-          Creative Builder
+          {t.brand}
         </Link>
         <div className="h-4 w-px bg-[#E0E0E0]" />
         <Link
@@ -38,28 +41,28 @@ export function DashboardNav({ userName, isAdmin }: DashboardNavProps) {
           className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
         >
           <LayoutDashboard className="h-4 w-4" />
-          Templates
+          {t.nav.templates}
         </Link>
         <Link
           href="/dashboard/history"
           className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
         >
           <History className="h-4 w-4" />
-          History
+          {t.nav.history}
         </Link>
         <Link
           href="/dashboard/analytics"
           className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
         >
           <BarChart3 className="h-4 w-4" />
-          Analytics
+          {t.nav.analytics}
         </Link>
         <Link
           href="/dashboard/settings"
           className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
         >
           <Settings className="h-4 w-4" />
-          Settings
+          {t.nav.settings}
         </Link>
         {isAdmin && (
           <Link
@@ -67,22 +70,23 @@ export function DashboardNav({ userName, isAdmin }: DashboardNavProps) {
             className="flex items-center gap-1.5 text-[13px] text-[#666666] transition-colors hover:text-[#1A1A1A]"
           >
             <Shield className="h-4 w-4" />
-            Admin
+            {t.nav.admin}
           </Link>
         )}
       </div>
       <div className="flex items-center gap-2">
+        <LocaleToggle />
         <span className="rounded-full bg-[#F4F4F4] px-2.5 py-1 text-[11px] font-medium text-[#666666]">
-          {isAdmin ? "Admin" : "Franchisee"}
+          {isAdmin ? t.roles.admin : t.roles.franchisee}
         </span>
         <span className="text-[13px] text-[#666666]">{userName}</span>
         <Button variant="ghost" size="sm" onClick={handleSwitchRole} className="text-[13px] text-[#666666] hover:text-[#1A1A1A]">
           <ArrowLeftRight className="mr-1 h-3.5 w-3.5" />
-          Switch
+          {t.nav.switch}
         </Button>
         <Button variant="ghost" size="sm" onClick={handleLogout} className="text-[13px] text-[#666666] hover:text-[#1A1A1A]">
           <LogOut className="mr-1 h-3.5 w-3.5" />
-          Sign out
+          {t.nav.signOut}
         </Button>
       </div>
     </nav>

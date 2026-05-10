@@ -8,30 +8,35 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import type { DailyMetrics } from "@/types/analytics";
-
-const chartConfig = {
-  spend: {
-    label: "Spend",
-    color: "hsl(var(--chart-1, 220 70% 50%))",
-  },
-} satisfies ChartConfig;
+import { useT, useLocale } from "@/lib/i18n/client";
 
 interface SpendTrendChartProps {
   data: DailyMetrics[];
 }
 
 export function SpendTrendChart({ data }: SpendTrendChartProps) {
+  const t = useT();
+  const locale = useLocale();
+  const dateLocale = locale === "fr" ? "fr-CA" : "en-US";
+
+  const chartConfig = {
+    spend: {
+      label: t.analytics.spend,
+      color: "hsl(var(--chart-1, 220 70% 50%))",
+    },
+  } satisfies ChartConfig;
+
   if (data.length === 0) {
     return (
       <div className="flex h-[300px] items-center justify-center rounded-xl border bg-white text-muted-foreground">
-        No spend data available
+        {t.analytics.noSpend}
       </div>
     );
   }
 
   return (
     <div className="rounded-xl border bg-white p-4">
-      <h3 className="mb-4 text-sm font-medium">Spend Over Time</h3>
+      <h3 className="mb-4 text-sm font-medium">{t.analytics.spendOverTime}</h3>
       <ChartContainer config={chartConfig} className="h-[300px] w-full">
         <AreaChart data={data}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -40,7 +45,7 @@ export function SpendTrendChart({ data }: SpendTrendChartProps) {
             tickLine={false}
             axisLine={false}
             tickFormatter={(v) =>
-              new Date(v).toLocaleDateString("en-US", {
+              new Date(v).toLocaleDateString(dateLocale, {
                 month: "short",
                 day: "numeric",
               })
@@ -51,7 +56,7 @@ export function SpendTrendChart({ data }: SpendTrendChartProps) {
             content={
               <ChartTooltipContent
                 labelFormatter={(v) =>
-                  new Date(v).toLocaleDateString("en-US", {
+                  new Date(v).toLocaleDateString(dateLocale, {
                     month: "long",
                     day: "numeric",
                     year: "numeric",

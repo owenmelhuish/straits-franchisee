@@ -7,8 +7,10 @@ import {
 } from "@/stores/builder-store";
 
 import { AssetDropdown } from "./asset-dropdown";
+import { useT } from "@/lib/i18n/client";
 
 export function ControlsPanel() {
+  const t = useT();
   const slide = useBuilderStore(selectActiveSlide);
   const template = useBuilderStore((s) => s.template);
   const layerSelections = useBuilderStore((s) => s.layerSelections);
@@ -25,7 +27,7 @@ export function ControlsPanel() {
     <div>
       <h3 className="mb-3 flex items-center gap-2 text-[14px] font-medium text-[#1A1A1A]">
         <Settings2 className="h-4 w-4 text-[#A5A5A5]" />
-        Controls
+        {t.builder.controls}
       </h3>
       <div className="space-y-4">
         {editableLayers.map((layer) => {

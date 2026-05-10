@@ -13,12 +13,14 @@ import {
 } from "@/components/admin/template-validation";
 import { Button } from "@/components/ui/button";
 import { TemplateLayer } from "@/types/template";
+import { useT } from "@/lib/i18n/client";
 
 interface PropertiesPanelProps {
   onLayerUpdate: (id: string, updates: Partial<TemplateLayer>) => void;
 }
 
 export function PropertiesPanel({ onLayerUpdate }: PropertiesPanelProps) {
+  const t = useT();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,8 +71,8 @@ export function PropertiesPanel({ onLayerUpdate }: PropertiesPanelProps) {
   }, [name, slug, description, formats, assetBanks, toTemplateConfig]);
 
   const validationIssues = useMemo(
-    () => (validationConfig ? computeValidationIssues(validationConfig) : []),
-    [validationConfig]
+    () => (validationConfig ? computeValidationIssues(validationConfig, t) : []),
+    [validationConfig, t]
   );
 
   const hasErrors = hasBlockingErrors(validationIssues);
@@ -82,12 +84,12 @@ export function PropertiesPanel({ onLayerUpdate }: PropertiesPanelProps) {
 
   async function handleSave(status: "draft" | "active") {
     if (!name.trim() || !slug.trim()) {
-      setError("Name and slug are required");
+      setError(t.templateCreator.nameSlugRequired);
       return;
     }
 
     if (status === "active" && hasErrors) {
-      setError("Fix validation errors before publishing");
+      setError(t.templateCreator.fixErrorsBeforePublish);
       return;
     }
 
@@ -115,13 +117,13 @@ export function PropertiesPanel({ onLayerUpdate }: PropertiesPanelProps) {
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || "Failed to save template");
+        throw new Error(data.error || t.templateCreator.saveFailed);
       }
 
       const template = await res.json();
       router.push(`/admin/templates/${template.id}/edit`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t.templateCreator.saveFailed);
     } finally {
       setSaving(false);
     }
@@ -133,36 +135,36 @@ export function PropertiesPanel({ onLayerUpdate }: PropertiesPanelProps) {
         {/* Template Metadata */}
         <div className="space-y-3">
           <h3 className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5]">
-            Template Info
+            {t.templateCreator.templateInfo}
           </h3>
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">Name</label>
+            <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">{t.templateCreator.name}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Spring Campaign"
+              placeholder={t.templateCreator.namePlaceholder}
               className="w-full rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] placeholder:text-[#A5A5A5] focus:border-[#D1D1D1] focus:outline-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">Slug</label>
+            <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">{t.templateCreator.slug}</label>
             <input
               type="text"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              placeholder="e.g. spring-campaign"
+              placeholder={t.templateCreator.slugPlaceholder}
               className="w-full rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] placeholder:text-[#A5A5A5] focus:border-[#D1D1D1] focus:outline-none"
             />
           </div>
           <div>
             <label className="mb-1 block text-[11px] font-medium text-[#A5A5A5]">
-              Description
+              {t.templateCreator.description}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Template description..."
+              placeholder={t.templateCreator.descriptionPlaceholder}
               rows={2}
               className="w-full rounded-xl border border-[#E0E0E0] bg-white px-3 py-2 text-[13px] text-[#1A1A1A] placeholder:text-[#A5A5A5] focus:border-[#D1D1D1] focus:outline-none resize-none"
             />
@@ -177,7 +179,7 @@ export function PropertiesPanel({ onLayerUpdate }: PropertiesPanelProps) {
           <LayerPropertiesForm layer={selectedLayer} onUpdate={handleLayerUpdate} />
         ) : (
           <p className="text-[13px] text-[#A5A5A5]">
-            Select a layer on the canvas to edit its properties.
+            {t.templateCreator.selectLayerHint}
           </p>
         )}
 
@@ -230,14 +232,14 @@ export function PropertiesPanel({ onLayerUpdate }: PropertiesPanelProps) {
             onClick={() => handleSave("draft")}
             disabled={saving}
           >
-            {saving ? "Saving..." : "Save Draft"}
+            {saving ? t.templateCreator.saving : t.templateCreator.saveDraft}
           </button>
           <button
             className="flex-1 rounded-xl bg-[#1A1A1A] px-3 py-2 text-[13px] font-medium text-white transition-all hover:bg-[#333333] disabled:opacity-40"
             onClick={() => handleSave("active")}
             disabled={saving || hasErrors}
           >
-            {saving ? "Publishing..." : "Publish"}
+            {saving ? t.templateCreator.publishing : t.templateCreator.publish}
           </button>
         </div>
       </div>

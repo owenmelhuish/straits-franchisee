@@ -4,6 +4,7 @@ import { useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import { useCreativeCanvas } from "@/hooks/use-creative-canvas";
 import { useCanvasScale } from "@/hooks/use-canvas-scale";
 import { TemplateFormat } from "@/types/template";
+import { useT } from "@/lib/i18n/client";
 
 export interface TemplatePreviewHandle {
   getCanvasDataUrl: () => string | null;
@@ -16,6 +17,7 @@ interface TemplatePreviewProps {
 
 export const TemplatePreview = forwardRef<TemplatePreviewHandle, TemplatePreviewProps>(
   function TemplatePreview({ format, slideIndex = 0 }, ref) {
+    const t = useT();
     const containerRef = useRef<HTMLDivElement>(null);
     const canvasWidth = format?.width ?? 1080;
     const canvasHeight = format?.height ?? 1920;
@@ -58,7 +60,7 @@ export const TemplatePreview = forwardRef<TemplatePreviewHandle, TemplatePreview
             <canvas ref={canvasRef} />
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No format to preview</p>
+          <p className="text-sm text-muted-foreground">{t.mapper.noFormatToPreview}</p>
         )}
       </div>
     );

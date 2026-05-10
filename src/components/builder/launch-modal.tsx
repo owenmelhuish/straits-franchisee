@@ -13,27 +13,52 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { useT, useLocale } from "@/lib/i18n/client";
+import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 
 // ── Meta CTA options ──
+// CTA values are Meta API enums and stay stable; labels are translated at render time.
 
-const META_CTA_OPTIONS = [
-  { value: "LEARN_MORE", label: "Learn More" },
-  { value: "SHOP_NOW", label: "Shop Now" },
-  { value: "SIGN_UP", label: "Sign Up" },
-  { value: "BOOK_NOW", label: "Book Now" },
-  { value: "CONTACT_US", label: "Contact Us" },
-  { value: "GET_OFFER", label: "Get Offer" },
-  { value: "GET_QUOTE", label: "Get Quote" },
-  { value: "ORDER_NOW", label: "Order Now" },
-  { value: "SUBSCRIBE", label: "Subscribe" },
-  { value: "DOWNLOAD", label: "Download" },
-  { value: "APPLY_NOW", label: "Apply Now" },
-  { value: "WATCH_MORE", label: "Watch More" },
-  { value: "SEND_MESSAGE", label: "Send Message" },
-  { value: "CALL_NOW", label: "Call Now" },
-  { value: "GET_DIRECTIONS", label: "Get Directions" },
-  { value: "NO_BUTTON", label: "No Button" },
+const META_CTA_VALUES = [
+  "LEARN_MORE",
+  "SHOP_NOW",
+  "SIGN_UP",
+  "BOOK_NOW",
+  "CONTACT_US",
+  "GET_OFFER",
+  "GET_QUOTE",
+  "ORDER_NOW",
+  "SUBSCRIBE",
+  "DOWNLOAD",
+  "APPLY_NOW",
+  "WATCH_MORE",
+  "SEND_MESSAGE",
+  "CALL_NOW",
+  "GET_DIRECTIONS",
+  "NO_BUTTON",
 ] as const;
+
+function ctaLabelFor(value: string, t: Dictionary): string {
+  const map: Record<string, string> = {
+    LEARN_MORE: t.launchModal.cta.learnMore,
+    SHOP_NOW: t.launchModal.cta.shopNow,
+    SIGN_UP: t.launchModal.cta.signUp,
+    BOOK_NOW: t.launchModal.cta.bookNow,
+    CONTACT_US: t.launchModal.cta.contactUs,
+    GET_OFFER: t.launchModal.cta.getOffer,
+    GET_QUOTE: t.launchModal.cta.getQuote,
+    ORDER_NOW: t.launchModal.cta.orderNow,
+    SUBSCRIBE: t.launchModal.cta.subscribe,
+    DOWNLOAD: t.launchModal.cta.download,
+    APPLY_NOW: t.launchModal.cta.applyNow,
+    WATCH_MORE: t.launchModal.cta.watchMore,
+    SEND_MESSAGE: t.launchModal.cta.sendMessage,
+    CALL_NOW: t.launchModal.cta.callNow,
+    GET_DIRECTIONS: t.launchModal.cta.getDirections,
+    NO_BUTTON: t.launchModal.cta.noButton,
+  };
+  return map[value] ?? value;
+}
 
 // ── Types ──
 
@@ -73,6 +98,9 @@ export function LaunchModal({
   onPublish,
   onClose,
 }: LaunchModalProps) {
+  const t = useT();
+  const locale = useLocale();
+  const dateLocale = locale === "fr" ? "fr-CA" : "en-US";
   const [step, setStep] = useState<Step>("campaign");
 
   // Campaign settings
@@ -103,7 +131,7 @@ export function LaunchModal({
 
   const formatDateDisplay = (dateStr: string) => {
     const d = new Date(dateStr + "T00:00:00");
-    return d.toLocaleDateString("en-US", {
+    return d.toLocaleDateString(dateLocale, {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -249,30 +277,31 @@ function CampaignStep({
   onNext: () => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const dateError =
     startDate && endDate && endDate < startDate
-      ? "End date must be on or after start date"
+      ? t.launchModal.dateError
       : null;
-  const budgetError = budget <= 0 ? "Budget must be greater than $0" : null;
+  const budgetError = budget <= 0 ? t.launchModal.budgetError : null;
   const hasErrors = !!dateError || !!budgetError;
 
   return (
     <div className="p-6">
-      <h2 className="mb-1 text-xl font-bold">Campaign Settings</h2>
+      <h2 className="mb-1 text-xl font-bold">{t.launchModal.campaignSettings}</h2>
       <p className="mb-6 text-sm text-muted-foreground">
-        Set your budget, schedule, and publishing destination.
+        {t.launchModal.campaignSettingsDesc}
       </p>
 
       {/* Flight Dates */}
       <div className="mb-6">
         <label className="mb-3 flex items-center gap-2 text-sm font-medium">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
-          Flight Dates
+          {t.launchModal.flightDates}
         </label>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">
-              Start
+              {t.launchModal.start}
             </label>
             <input
               type="date"
@@ -283,7 +312,7 @@ function CampaignStep({
           </div>
           <div>
             <label className="mb-1 block text-xs text-muted-foreground">
-              End
+              {t.launchModal.end}
             </label>
             <input
               type="date"
@@ -302,7 +331,7 @@ function CampaignStep({
       <div className="mb-6">
         <label className="mb-3 flex items-center gap-2 text-sm font-medium">
           <DollarSign className="h-4 w-4 text-muted-foreground" />
-          Budget
+          {t.launchModal.budget}
         </label>
         <div className="mb-2 text-2xl font-bold">${budget}</div>
         <Slider
@@ -328,11 +357,11 @@ function CampaignStep({
       <div className="mb-8 rounded-lg border p-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium">Publish to Meta Ads</p>
+            <p className="text-sm font-medium">{t.launchModal.publishToMeta}</p>
             <p className="text-xs text-muted-foreground">
               {metaConnected
-                ? "Create a paused ad in your Meta Ad Account"
-                : "Connect your Meta account in Settings first"}
+                ? t.launchModal.publishToMetaDescConnected
+                : t.launchModal.publishToMetaDescDisconnected}
             </p>
           </div>
           <button
@@ -357,7 +386,7 @@ function CampaignStep({
             href="/dashboard/settings"
             className="mt-2 inline-block text-xs text-primary underline"
           >
-            Go to Settings
+            {t.launchModal.goToSettings}
           </a>
         )}
       </div>
@@ -365,10 +394,10 @@ function CampaignStep({
       {/* Actions */}
       <div className="grid grid-cols-2 gap-3">
         <Button variant="outline" onClick={onClose} className="w-full">
-          Cancel
+          {t.launchModal.cancel}
         </Button>
         <Button onClick={onNext} className="w-full" disabled={hasErrors}>
-          Next
+          {t.launchModal.next}
         </Button>
       </div>
     </div>
@@ -400,24 +429,25 @@ function AdDetailsStep({
   onBack: () => void;
   onNext: () => void;
 }) {
+  const t = useT();
   return (
     <div className="p-6">
-      <h2 className="mb-1 text-xl font-bold">Ad Details</h2>
+      <h2 className="mb-1 text-xl font-bold">{t.launchModal.adDetails}</h2>
       <p className="mb-6 text-sm text-muted-foreground">
-        Add the copy and link for your ad.
+        {t.launchModal.adDetailsDesc}
       </p>
 
       {/* Headline */}
       <div className="mb-5">
         <label className="mb-2 flex items-center gap-2 text-sm font-medium">
           <Type className="h-4 w-4 text-muted-foreground" />
-          Headline
+          {t.launchModal.headline}
         </label>
         <input
           type="text"
           value={headline}
           onChange={(e) => onHeadlineChange(e.target.value)}
-          placeholder="Your ad headline"
+          placeholder={t.launchModal.headlinePlaceholder}
           maxLength={40}
           className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
         />
@@ -430,12 +460,12 @@ function AdDetailsStep({
       <div className="mb-5">
         <label className="mb-2 flex items-center gap-2 text-sm font-medium">
           <Type className="h-4 w-4 text-muted-foreground" />
-          Caption
+          {t.launchModal.caption}
         </label>
         <textarea
           value={caption}
           onChange={(e) => onCaptionChange(e.target.value)}
-          placeholder="Write your ad caption..."
+          placeholder={t.launchModal.captionPlaceholder}
           maxLength={2200}
           rows={4}
           className="w-full resize-none rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
@@ -449,13 +479,13 @@ function AdDetailsStep({
       <div className="mb-5">
         <label className="mb-2 flex items-center gap-2 text-sm font-medium">
           <Link2 className="h-4 w-4 text-muted-foreground" />
-          Destination URL
+          {t.launchModal.destinationUrl}
         </label>
         <input
           type="url"
           value={linkUrl}
           onChange={(e) => onLinkUrlChange(e.target.value)}
-          placeholder="https://your-website.com/landing-page"
+          placeholder={t.launchModal.destinationUrlPlaceholder}
           className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
@@ -464,16 +494,16 @@ function AdDetailsStep({
       <div className="mb-8">
         <label className="mb-2 flex items-center gap-2 text-sm font-medium">
           <MousePointerClick className="h-4 w-4 text-muted-foreground" />
-          Call to Action
+          {t.launchModal.callToAction}
         </label>
         <select
           value={callToAction}
           onChange={(e) => onCallToActionChange(e.target.value)}
           className="w-full rounded-md border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
         >
-          {META_CTA_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+          {META_CTA_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {ctaLabelFor(value, t)}
             </option>
           ))}
         </select>
@@ -483,10 +513,10 @@ function AdDetailsStep({
       <div className="grid grid-cols-2 gap-3">
         <Button variant="outline" onClick={onBack} className="w-full">
           <ChevronLeft className="mr-1 h-4 w-4" />
-          Back
+          {t.launchModal.back}
         </Button>
         <Button onClick={onNext} className="w-full">
-          Review
+          {t.launchModal.review}
         </Button>
       </div>
     </div>
@@ -533,18 +563,17 @@ function ReviewStep({
   onBack: () => void;
   onPublish: () => void;
 }) {
-  const ctaLabel =
-    META_CTA_OPTIONS.find((o) => o.value === callToAction)?.label ??
-    callToAction;
+  const t = useT();
+  const ctaLabel = ctaLabelFor(callToAction, t);
 
   return (
     <div className="p-6">
-      <h2 className="mb-6 text-xl font-bold">Review & Publish</h2>
+      <h2 className="mb-6 text-xl font-bold">{t.launchModal.reviewPublish}</h2>
 
       {/* Creative Content */}
       {adContentRows.length > 0 && (
         <>
-          <h3 className="mb-2 text-sm font-semibold">Creative</h3>
+          <h3 className="mb-2 text-sm font-semibold">{t.launchModal.creative}</h3>
           <div className="mb-5 rounded-lg bg-[#F4F4F4] p-4">
             <div className="space-y-3">
               {adContentRows.map((row) => (
@@ -572,13 +601,13 @@ function ReviewStep({
       )}
 
       {/* Ad Copy */}
-      <h3 className="mb-2 text-sm font-semibold">Ad Copy</h3>
+      <h3 className="mb-2 text-sm font-semibold">{t.launchModal.adCopy}</h3>
       <div className="mb-5 rounded-lg bg-[#F4F4F4] p-4">
         <div className="space-y-3">
-          <DetailRow label="Headline" value={headline || "—"} />
+          <DetailRow label={t.launchModal.headline} value={headline || "—"} />
           {caption && (
             <div className="text-sm">
-              <span className="text-muted-foreground">Caption</span>
+              <span className="text-muted-foreground">{t.launchModal.caption}</span>
               <p className="mt-1 font-medium leading-relaxed">
                 {caption.length > 120
                   ? caption.slice(0, 120) + "..."
@@ -586,21 +615,21 @@ function ReviewStep({
               </p>
             </div>
           )}
-          <DetailRow label="CTA Button" value={ctaLabel} />
-          <DetailRow label="Link" value={linkUrl || "—"} />
+          <DetailRow label={t.launchModal.ctaButton} value={ctaLabel} />
+          <DetailRow label={t.launchModal.link} value={linkUrl || "—"} />
         </div>
       </div>
 
       {/* Campaign Details */}
-      <h3 className="mb-2 text-sm font-semibold">Campaign</h3>
+      <h3 className="mb-2 text-sm font-semibold">{t.launchModal.campaign}</h3>
       <div className="mb-6 rounded-lg bg-[#F4F4F4] p-4">
         <div className="space-y-3">
-          <DetailRow label="Template" value={templateName} />
-          <DetailRow label="Format" value={`${formatName} (${formatSize})`} />
-          <DetailRow label="Budget" value={`$${budget}`} />
-          <DetailRow label="Dates" value={`${startDate} – ${endDate}`} />
+          <DetailRow label={t.launchModal.template} value={templateName} />
+          <DetailRow label={t.launchModal.format} value={`${formatName} (${formatSize})`} />
+          <DetailRow label={t.launchModal.budget} value={`$${budget}`} />
+          <DetailRow label={t.launchModal.dates} value={`${startDate} – ${endDate}`} />
           {publishToMeta && (
-            <DetailRow label="Destination" value="Meta Ads (paused)" />
+            <DetailRow label={t.launchModal.destination} value={t.launchModal.metaAdsPaused} />
           )}
         </div>
       </div>
@@ -609,7 +638,7 @@ function ReviewStep({
       <div className="grid grid-cols-2 gap-3">
         <Button variant="outline" onClick={onBack} className="w-full">
           <ChevronLeft className="mr-1 h-4 w-4" />
-          Back
+          {t.launchModal.back}
         </Button>
         <Button
           onClick={onPublish}
@@ -619,10 +648,10 @@ function ReviewStep({
           {isPublishing ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Publishing...
+              {t.launchModal.publishing}
             </>
           ) : (
-            "Publish"
+            t.launchModal.publish
           )}
         </Button>
       </div>

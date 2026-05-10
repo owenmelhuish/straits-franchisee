@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { FileImage, History, Upload } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
+  const t = await getT();
 
   const [{ count: templateCount }, { count: submissionCount }] =
     await Promise.all([
@@ -13,16 +15,16 @@ export default async function AdminDashboard() {
 
   return (
     <div className="rounded-3xl bg-white p-8 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
-      <h1 className="mb-6 text-[16px] font-semibold text-[#1A1A1A]">Admin Dashboard</h1>
+      <h1 className="mb-6 text-[16px] font-semibold text-[#1A1A1A]">{t.adminDashboard.title}</h1>
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
-          label="Templates"
+          label={t.adminDashboard.templates}
           value={templateCount ?? 0}
           icon={<FileImage className="h-5 w-5 text-[#A5A5A5]" />}
           href="/admin/templates"
         />
         <StatCard
-          label="Submissions"
+          label={t.adminDashboard.submissions}
           value={submissionCount ?? 0}
           icon={<History className="h-5 w-5 text-[#A5A5A5]" />}
           href="/admin/submissions"
@@ -32,7 +34,7 @@ export default async function AdminDashboard() {
           className="flex items-center gap-3 rounded-2xl bg-[#F4F4F4] p-6 transition-all hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
         >
           <Upload className="h-5 w-5 text-[#1A1A1A]" />
-          <span className="text-[14px] font-medium text-[#1A1A1A]">Create New</span>
+          <span className="text-[14px] font-medium text-[#1A1A1A]">{t.adminDashboard.createNew}</span>
         </Link>
       </div>
     </div>

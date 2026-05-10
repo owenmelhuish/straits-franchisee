@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, Loader2, AlertTriangle, CheckCircle, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n/client";
 
 interface ParseStats {
   totalLayers: number;
@@ -23,6 +24,7 @@ interface PsdUploadProps {
 }
 
 export function PsdUpload({ formatName }: PsdUploadProps) {
+  const t = useT();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
@@ -59,9 +61,9 @@ export function PsdUpload({ formatName }: PsdUploadProps) {
       if (!slug) setSlug(deriveSlug(dropped.name));
       if (!name) setName(deriveName(dropped.name));
     } else {
-      setError("Please upload a .psd or .psb file");
+      setError(t.psdUpload.pleaseUpload);
     }
-  }, [slug, name]);
+  }, [slug, name, t]);
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,7 +83,7 @@ export function PsdUpload({ formatName }: PsdUploadProps) {
     setUploading(true);
     setError(null);
     setParseResult(null);
-    setProgress("Parsing PSD layers...");
+    setProgress(t.psdUpload.parsingLayers);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -101,16 +103,16 @@ export function PsdUpload({ formatName }: PsdUploadProps) {
       if (!res.ok) {
         if (contentType.includes("application/json")) {
           const data = await res.json();
-          throw new Error(data.error || "Upload failed");
+          throw new Error(data.error || t.psdUpload.uploadFailed);
         }
-        throw new Error(res.statusText || `Upload failed (${res.status})`);
+        throw new Error(res.statusText || `${t.psdUpload.uploadFailed} (${res.status})`);
       }
 
       const data: ParseResultData = await res.json();
       setParseResult(data);
       setProgress("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : t.psdUpload.uploadFailed);
     } finally {
       setUploading(false);
     }
@@ -142,8 +144,8 @@ export function PsdUpload({ formatName }: PsdUploadProps) {
           </div>
         ) : (
           <div className="text-center">
-            <p className="font-medium">Drop PSD file here</p>
-            <p className="text-sm text-muted-foreground">or click to browse</p>
+            <p className="font-medium">{t.psdUpload.dropFile}</p>
+            <p className="text-sm text-muted-foreground">{t.psdUpload.orClick}</p>
           </div>
         )}
         <input
@@ -156,29 +158,29 @@ export function PsdUpload({ formatName }: PsdUploadProps) {
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Template name</label>
+        <label className="mb-1 block text-sm font-medium">{t.psdUpload.templateName}</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="My Template"
+          placeholder={t.psdUpload.templateNamePlaceholder}
           className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium">Template slug</label>
+        <label className="mb-1 block text-sm font-medium">{t.psdUpload.templateSlug}</label>
         <input
           type="text"
           value={slug}
           onChange={(e) => setSlug(e.target.value.replace(/[^a-z0-9-]/g, ""))}
-          placeholder="my-template"
+          placeholder={t.psdUpload.templateSlugPlaceholder}
           pattern="[a-z0-9-]+"
-          title="Lowercase letters, numbers, and hyphens only"
+          title={t.psdUpload.slugHint}
           className="w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
         />
         <p className="mt-1 text-xs text-muted-foreground">
-          Lowercase letters, numbers, and hyphens only
+          {t.psdUpload.slugHint}
         </p>
       </div>
 
@@ -196,24 +198,24 @@ export function PsdUpload({ formatName }: PsdUploadProps) {
         <div className="space-y-3 rounded-xl border bg-muted/30 p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-green-700">
             <CheckCircle className="h-4 w-4" />
-            PSD parsed successfully
+            {t.psdUpload.parsedSuccess}
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-md bg-white px-3 py-2">
-              <span className="text-muted-foreground">Total layers:</span>{" "}
+              <span className="text-muted-foreground">{t.psdUpload.totalLayers}</span>{" "}
               <span className="font-medium">{parseResult.stats.totalLayers}</span>
             </div>
             <div className="rounded-md bg-white px-3 py-2">
-              <span className="text-muted-foreground">Images:</span>{" "}
+              <span className="text-muted-foreground">{t.psdUpload.images}</span>{" "}
               <span className="font-medium">{parseResult.stats.imagesExtracted}</span>
             </div>
             <div className="rounded-md bg-white px-3 py-2">
-              <span className="text-muted-foreground">Text layers:</span>{" "}
+              <span className="text-muted-foreground">{t.psdUpload.textLayers}</span>{" "}
               <span className="font-medium">{parseResult.stats.textLayers}</span>
             </div>
             <div className="rounded-md bg-white px-3 py-2">
-              <span className="text-muted-foreground">Shapes:</span>{" "}
+              <span className="text-muted-foreground">{t.psdUpload.shapes}</span>{" "}
               <span className="font-medium">{parseResult.stats.rectLayers}</span>
             </div>
           </div>
@@ -222,7 +224,8 @@ export function PsdUpload({ formatName }: PsdUploadProps) {
             <div className="space-y-1">
               <div className="flex items-center gap-1 text-sm font-medium text-amber-600">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                {parseResult.warnings.length} warning{parseResult.warnings.length !== 1 ? "s" : ""}
+                {parseResult.warnings.length}{" "}
+                {parseResult.warnings.length !== 1 ? t.psdUpload.warnings : t.psdUpload.warning}
               </div>
               <ul className="space-y-0.5 text-xs text-muted-foreground">
                 {parseResult.warnings.map((w, i) => (
@@ -237,7 +240,7 @@ export function PsdUpload({ formatName }: PsdUploadProps) {
             onClick={() => router.push(`/admin/templates/${parseResult.template.id}/edit`)}
             className="w-full"
           >
-            Continue to Editor
+            {t.psdUpload.continueToEditor}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -245,7 +248,7 @@ export function PsdUpload({ formatName }: PsdUploadProps) {
 
       {!parseResult && (
         <Button type="button" onClick={handleUpload} disabled={!file || !slug || uploading} className="w-full">
-          {uploading ? "Processing..." : "Parse & Create Template"}
+          {uploading ? t.psdUpload.processing : t.psdUpload.parseAndCreate}
         </Button>
       )}
     </div>

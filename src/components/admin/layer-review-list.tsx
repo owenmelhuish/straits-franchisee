@@ -2,6 +2,8 @@
 
 import { TemplateLayer, AssetBank } from "@/types/template";
 import { Pencil } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
+import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 
 interface LayerReviewListProps {
   layers: TemplateLayer[];
@@ -16,10 +18,11 @@ export function LayerReviewList({
   onLayerUpdate,
   onCreateBank,
 }: LayerReviewListProps) {
+  const t = useT();
   return (
     <div className="space-y-1">
       <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        Layers
+        {t.mapper.layers}
       </h3>
       {layers.map((layer) => (
         <LayerItem
@@ -28,6 +31,7 @@ export function LayerReviewList({
           assetBanks={assetBanks}
           onUpdate={onLayerUpdate}
           onCreateBank={onCreateBank}
+          t={t}
         />
       ))}
     </div>
@@ -41,11 +45,13 @@ function LayerItem({
   assetBanks,
   onUpdate,
   onCreateBank,
+  t,
 }: {
   layer: TemplateLayer;
   assetBanks: AssetBank[];
   onUpdate: (id: string, updates: Partial<TemplateLayer>) => void;
   onCreateBank: (name: string, type: "image" | "text") => void;
+  t: Dictionary;
 }) {
   // Filter banks by compatible type
   const compatibleType = layer.type === "text" ? "text" : "image";
@@ -75,7 +81,7 @@ function LayerItem({
         type="button"
         onClick={() => onUpdate(layer.id, { editable: !layer.editable })}
         className={`rounded p-1 ${layer.editable ? "text-primary" : "text-muted-foreground"}`}
-        title={layer.editable ? "Editable" : "Not editable"}
+        title={layer.editable ? t.mapper.layerEditable : t.mapper.layerNotEditable}
       >
         <Pencil className="h-3.5 w-3.5" />
       </button>
@@ -86,13 +92,13 @@ function LayerItem({
           onChange={(e) => handleBankChange(e.target.value)}
           className="w-32 rounded border px-1.5 py-0.5 text-xs"
         >
-          <option value="">No bank</option>
+          <option value="">{t.mapper.noBank}</option>
           {compatibleBanks.map((bank) => (
             <option key={bank.id || bank.name} value={bank.name}>
               {bank.name}
             </option>
           ))}
-          <option value={CREATE_NEW_VALUE}>+ Create new bank...</option>
+          <option value={CREATE_NEW_VALUE}>{t.mapper.createNewBank}</option>
         </select>
       )}
     </div>

@@ -4,6 +4,8 @@ import { getTemplates } from "@/lib/supabase/db";
 import { TemplateRow } from "@/types/database";
 import { TemplateCard } from "@/components/dashboard/template-card";
 import { SEED_TEMPLATES } from "@/lib/seed/templates";
+import { getT } from "@/lib/i18n/server";
+import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
@@ -11,6 +13,7 @@ export default async function DashboardPage() {
   const cookieStore = await cookies();
   const role = cookieStore.get("dev-role")?.value;
   const isAdmin = role === "admin";
+  const t = await getT();
 
   let dbTemplates: TemplateRow[] = [];
 
@@ -24,14 +27,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="mb-1 text-[16px] font-semibold text-[#1A1A1A]">Templates</h1>
-      <p className="mb-8 text-[13px] text-[#666666]">
-        Select a template to start customizing your creative asset.
-      </p>
+      <h1 className="mb-1 text-[16px] font-semibold text-[#1A1A1A]">{t.dashboard.title}</h1>
+      <p className="mb-8 text-[13px] text-[#666666]">{t.dashboard.subtitle}</p>
 
       {dbTemplates.length > 0 ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {isAdmin && <CreateNewCard />}
+          {isAdmin && <CreateNewCard t={t} />}
           {dbTemplates.map((template) => (
             <TemplateCard key={template.id} template={template} isAdmin={isAdmin} />
           ))}
@@ -40,7 +41,7 @@ export default async function DashboardPage() {
         <>
           {/* Fallback to seed templates when no DB templates exist */}
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {isAdmin && <CreateNewCard />}
+            {isAdmin && <CreateNewCard t={t} />}
             {SEED_TEMPLATES.map((template) => (
               <Link
                 key={template.id}
@@ -61,7 +62,7 @@ export default async function DashboardPage() {
                     {template.description}
                   </p>
                   <p className="mt-2 text-[11px] font-medium text-[#A5A5A5]">
-                    {template.formats.length} format
+                    {template.formats.length} {t.dashboard.formatLabel}
                     {template.formats.length !== 1 ? "s" : ""}
                   </p>
                 </div>
@@ -74,7 +75,7 @@ export default async function DashboardPage() {
   );
 }
 
-function CreateNewCard() {
+function CreateNewCard({ t }: { t: Dictionary }) {
   return (
     <Link
       href="/template-creator"
@@ -84,10 +85,8 @@ function CreateNewCard() {
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F4F4F4] transition-colors group-hover:bg-[#E0E0E0]">
           <Plus className="h-5 w-5 text-[#1A1A1A]" />
         </div>
-        <h2 className="text-[14px] font-medium text-[#1A1A1A]">Create New</h2>
-        <p className="mt-1 text-[13px] text-[#666666]">
-          Upload a PSD template
-        </p>
+        <h2 className="text-[14px] font-medium text-[#1A1A1A]">{t.dashboard.createNew}</h2>
+        <p className="mt-1 text-[13px] text-[#666666]">{t.dashboard.createNewDesc}</p>
       </div>
     </Link>
   );

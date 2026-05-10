@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AssetBank, AssetBankItem } from "@/types/template";
 import { Plus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/lib/i18n/client";
 
 interface BankEditorProps {
   banks: AssetBank[];
@@ -11,6 +12,7 @@ interface BankEditorProps {
 }
 
 export function BankEditor({ banks, onBanksChange }: BankEditorProps) {
+  const t = useT();
   const [newBankName, setNewBankName] = useState("");
   const [newBankType, setNewBankType] = useState<"image" | "text">("image");
 
@@ -85,7 +87,7 @@ export function BankEditor({ banks, onBanksChange }: BankEditorProps) {
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        Asset Banks
+        {t.mapper.assetBanks}
       </h3>
 
       {banks.map((bank, bi) => (
@@ -107,7 +109,7 @@ export function BankEditor({ banks, onBanksChange }: BankEditorProps) {
                   type="text"
                   value={item.label}
                   onChange={(e) => updateItem(bi, ii, { label: e.target.value })}
-                  placeholder="Label"
+                  placeholder={t.mapper.label}
                   className="w-28 rounded border px-2 py-1 text-xs"
                 />
                 {bank.type === "image" ? (
@@ -116,7 +118,7 @@ export function BankEditor({ banks, onBanksChange }: BankEditorProps) {
                       type="text"
                       value={item.value}
                       onChange={(e) => updateItem(bi, ii, { value: e.target.value })}
-                      placeholder="Image URL"
+                      placeholder={t.mapper.imageUrl}
                       className="flex-1 rounded border px-2 py-1 text-xs"
                     />
                     <label className="cursor-pointer rounded border p-1 hover:bg-accent">
@@ -137,7 +139,7 @@ export function BankEditor({ banks, onBanksChange }: BankEditorProps) {
                     type="text"
                     value={item.value}
                     onChange={(e) => updateItem(bi, ii, { value: e.target.value })}
-                    placeholder="Text value"
+                    placeholder={t.mapper.textValue}
                     className="flex-1 rounded border px-2 py-1 text-xs"
                   />
                 )}
@@ -155,7 +157,7 @@ export function BankEditor({ banks, onBanksChange }: BankEditorProps) {
             onClick={() => addItem(bi)}
             className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline"
           >
-            <Plus className="h-3 w-3" /> Add item
+            <Plus className="h-3 w-3" /> {t.mapper.addItem}
           </button>
         </div>
       ))}
@@ -165,7 +167,7 @@ export function BankEditor({ banks, onBanksChange }: BankEditorProps) {
           type="text"
           value={newBankName}
           onChange={(e) => setNewBankName(e.target.value)}
-          placeholder="Bank name"
+          placeholder={t.mapper.bankNamePlaceholder}
           className="flex-1 rounded border px-2 py-1.5 text-sm"
         />
         <select
@@ -173,11 +175,11 @@ export function BankEditor({ banks, onBanksChange }: BankEditorProps) {
           onChange={(e) => setNewBankType(e.target.value as "image" | "text")}
           className="rounded border px-2 py-1.5 text-sm"
         >
-          <option value="image">Image</option>
-          <option value="text">Text</option>
+          <option value="image">{t.mapper.image}</option>
+          <option value="text">{t.mapper.text}</option>
         </select>
         <Button size="sm" onClick={addBank} disabled={!newBankName.trim()}>
-          <Plus className="mr-1 h-3 w-3" /> Add Bank
+          <Plus className="mr-1 h-3 w-3" /> {t.mapper.addBank}
         </Button>
       </div>
     </div>

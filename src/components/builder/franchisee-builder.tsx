@@ -14,6 +14,7 @@ import { LaunchModal, CampaignData } from "@/components/builder/launch-modal";
 import { exportToStorage } from "@/lib/canvas/export-to-storage";
 import { TemplateConfig } from "@/types/template";
 import { toast } from "sonner";
+import { useT } from "@/lib/i18n/client";
 import {
   ChevronLeft,
   Download,
@@ -36,6 +37,7 @@ interface FranchiseeBuilderProps {
 }
 
 export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
+  const t = useT();
   const setTemplate = useBuilderStore((s) => s.setTemplate);
   const format = useBuilderStore(selectActiveFormat);
   const activeSlide = useBuilderStore(selectActiveSlide);
@@ -183,13 +185,25 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
     const out: Blob[] = [];
     for (const slide of slides) {
       const fns = exportFnsRef.current[slide.id];
-      if (!fns) throw new Error(`Slide "${slide.label ?? slide.id}" is not ready`);
+      if (!fns)
+        throw new Error(
+          t.builder.slideNotReady.replace(
+            "{name}",
+            slide.label ?? slide.id
+          )
+        );
       const blob = await fns.getBlob();
-      if (!blob) throw new Error(`Failed to export slide "${slide.label ?? slide.id}"`);
+      if (!blob)
+        throw new Error(
+          t.builder.slideExportFailed.replace(
+            "{name}",
+            slide.label ?? slide.id
+          )
+        );
       out.push(blob);
     }
     return out;
-  }, [slides]);
+  }, [slides, t]);
 
   // Export: triggers per-slide PNG downloads
   const handleExportAll = useCallback(() => {
@@ -220,20 +234,20 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
           selections: layerSelections,
           campaign,
         });
-        toast.success(result.metaAdId ? "Published to Meta Ads!" : "Campaign published!", {
-          description: result.metaAdId ? "Ad created in PAUSED status." : "Creative exported and saved.",
+        toast.success(result.metaAdId ? t.builder.publishedToMeta : t.builder.campaignPublishedShort, {
+          description: result.metaAdId ? t.builder.publishedMetaDescShort : t.builder.publishedSavedDescShort,
         });
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "Failed to save campaign";
+        const msg = err instanceof Error ? err.message : t.builder.saveCampaignFailed;
         toast.error(msg);
       } finally {
         setExporting(false);
       }
     } else {
-      toast.success("Creative exported!");
+      toast.success(t.builder.creativeExported);
     }
     setShowLaunchModal(false);
-  }, [format, userId, layerSelections, setExporting, handleExportAll, getAllSlideBlobs, template.id, template.name, template.slug]);
+  }, [format, userId, layerSelections, setExporting, handleExportAll, getAllSlideBlobs, template.id, template.name, template.slug, t]);
 
   // Editable layers for right panel: anything marked editable on the active slide.
   // Text layers without a linkedBank are free-form (franchisee types their own).
@@ -264,7 +278,7 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
         <button onClick={handleExportAll}
           className="flex items-center gap-1.5 rounded-xl bg-[#1A1A1A] px-5 py-2 text-[13px] font-semibold text-white hover:bg-[#333]">
           <Download className="h-3.5 w-3.5" />
-          Export{slides.length > 1 ? ` (${slides.length})` : ""}
+          {t.builder.export}{slides.length > 1 ? ` (${slides.length})` : ""}
         </button>
       </div>
 
@@ -273,15 +287,15 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
         className="flex flex-col overflow-hidden rounded-[32px] bg-white p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.04)]">
         {/* Back + title */}
         <Link href="/dashboard" className="mb-3 inline-flex items-center gap-1 text-[13px] text-[#A5A5A5] hover:text-[#1A1A1A] transition-colors">
-          <ChevronLeft className="h-3.5 w-3.5" /> Back
+          <ChevronLeft className="h-3.5 w-3.5" /> {t.builder.back}
         </Link>
         <h2 className="text-[15px] font-semibold text-[#1A1A1A]">{template.name}</h2>
         <p className="text-[12px] text-[#A5A5A5] mt-0.5">{template.description}</p>
 
         {/* Scene / Assets tab (decorative for now) */}
         <div className="mt-4 flex gap-1 rounded-xl bg-[#F4F4F4] p-1">
-          <button className="flex-1 rounded-lg bg-white py-2 text-[13px] font-medium text-[#1A1A1A] shadow-[0px_2px_8px_rgba(0,0,0,0.06)]">Scene</button>
-          <button className="flex-1 rounded-lg py-2 text-[13px] font-medium text-[#A5A5A5]">Assets</button>
+          <button className="flex-1 rounded-lg bg-white py-2 text-[13px] font-medium text-[#1A1A1A] shadow-[0px_2px_8px_rgba(0,0,0,0.06)]">{t.builder.sceneTab}</button>
+          <button className="flex-1 rounded-lg py-2 text-[13px] font-medium text-[#A5A5A5]">{t.builder.assetsTab}</button>
         </div>
 
         {/* Layer list */}
@@ -294,7 +308,7 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
                 <Icon className="h-4 w-4 shrink-0 text-[#A5A5A5]" />
                 <span className="flex-1 truncate">{layer.name}</span>
                 {layer.editable && (
-                  <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-medium text-[#A5A5A5] shadow-sm">edit</span>
+                  <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-medium text-[#A5A5A5] shadow-sm">{t.builder.editable}</span>
                 )}
               </div>
             );
@@ -347,7 +361,7 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
             <Plus className="h-3.5 w-3.5" />
           </button>
           <div className="h-3.5 w-px bg-[#E0E0E0]" />
-          <button onClick={fitToView} title="Fit to view"
+          <button onClick={fitToView} title={t.builder.fitToView}
             className="rounded-lg p-1 text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A]">
             <Maximize className="h-3.5 w-3.5" />
           </button>
@@ -363,11 +377,13 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
         <div className="mb-4 flex items-center justify-between">
           <h3 className="flex items-center gap-2 text-[14px] font-semibold text-[#1A1A1A]">
             <Settings2 className="h-4 w-4 text-[#A5A5A5]" />
-            Controls
+            {t.builder.controls}
           </h3>
           {slides.length > 1 && (
             <span className="rounded-full bg-[#F4F4F4] px-2 py-0.5 text-[11px] font-medium text-[#666]">
-              Slide {activeSlideIndex + 1} of {slides.length}
+              {t.builder.slideOf
+                .replace("{n}", String(activeSlideIndex + 1))
+                .replace("{total}", String(slides.length))}
             </span>
           )}
         </div>
@@ -387,7 +403,7 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
                     value={currentValue}
                     onChange={(e) => setLayerSelection(layer.id, e.target.value)}
                     rows={2}
-                    placeholder="Type your text…"
+                    placeholder={t.builder.typeYourText}
                     className="w-full resize-none rounded-xl border border-[#E0E0E0] bg-white px-3 py-2.5 text-[13px] text-[#1A1A1A] focus:border-[#D1D1D1] focus:outline-none"
                   />
                 </div>
@@ -439,7 +455,7 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
         <div className="mb-4">
           <div className="flex items-center justify-between rounded-xl bg-[#F4F4F4] px-4 py-3">
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5]">Format</p>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5]">{t.builder.format}</p>
               <p className="text-[13px] font-medium text-[#1A1A1A]">{format?.label}</p>
             </div>
             <p className="text-[13px] text-[#666]">{format?.width} × {format?.height}</p>
@@ -453,7 +469,7 @@ export function FranchiseeBuilder({ template }: FranchiseeBuilderProps) {
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1A1A1A] px-4 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#333] disabled:opacity-40"
         >
           <Rocket className="h-4 w-4" />
-          Launch Campaign
+          {t.builder.launchCampaign}
         </button>
       </div>
 

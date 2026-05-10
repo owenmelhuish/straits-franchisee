@@ -1,6 +1,7 @@
 "use client";
 
 import type { AdPerformanceRow } from "@/types/analytics";
+import { useT, useLocale } from "@/lib/i18n/client";
 
 interface AdsTableProps {
   ads: AdPerformanceRow[];
@@ -22,10 +23,14 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function AdsTable({ ads }: AdsTableProps) {
+  const t = useT();
+  const locale = useLocale();
+  const dateLocale = locale === "fr" ? "fr-CA" : "en-US";
+
   if (ads.length === 0) {
     return (
       <div className="rounded-xl border bg-white p-8 text-center text-muted-foreground">
-        No ads launched yet. Create and launch ads from a template to see performance here.
+        {t.analytics.noAds}
       </div>
     );
   }
@@ -35,14 +40,14 @@ export function AdsTable({ ads }: AdsTableProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b text-left text-xs text-muted-foreground">
-            <th className="px-4 py-3 font-medium">Ad Name</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium text-right">Impressions</th>
-            <th className="px-4 py-3 font-medium text-right">Reach</th>
-            <th className="px-4 py-3 font-medium text-right">Clicks</th>
-            <th className="px-4 py-3 font-medium text-right">Spend</th>
-            <th className="px-4 py-3 font-medium text-right">CPM</th>
-            <th className="px-4 py-3 font-medium text-right">Created</th>
+            <th className="px-4 py-3 font-medium">{t.analytics.adName}</th>
+            <th className="px-4 py-3 font-medium">{t.analytics.status}</th>
+            <th className="px-4 py-3 font-medium text-right">{t.analytics.impressions}</th>
+            <th className="px-4 py-3 font-medium text-right">{t.analytics.reach}</th>
+            <th className="px-4 py-3 font-medium text-right">{t.analytics.clicks}</th>
+            <th className="px-4 py-3 font-medium text-right">{t.analytics.spend}</th>
+            <th className="px-4 py-3 font-medium text-right">{t.analytics.cpm}</th>
+            <th className="px-4 py-3 font-medium text-right">{t.analytics.created}</th>
           </tr>
         </thead>
         <tbody>
@@ -68,7 +73,7 @@ export function AdsTable({ ads }: AdsTableProps) {
                 ${ad.cpm.toFixed(2)}
               </td>
               <td className="px-4 py-3 text-right text-muted-foreground">
-                {new Date(ad.createdAt).toLocaleDateString()}
+                {new Date(ad.createdAt).toLocaleDateString(dateLocale)}
               </td>
             </tr>
           ))}

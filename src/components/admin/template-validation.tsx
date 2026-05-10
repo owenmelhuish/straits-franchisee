@@ -2,21 +2,52 @@
 
 import { TemplateConfig } from "@/types/template";
 import { AlertTriangle, XCircle, AlertCircle } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
+import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 
 export interface ValidationIssue {
   level: "error" | "warning" | "info";
   message: string;
 }
 
-export function computeValidationIssues(config: TemplateConfig): ValidationIssue[] {
+function fmt(template: string, vars: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (_, k) =>
+    String(vars[k] ?? `{${k}}`)
+  );
+}
+
+/**
+ * Pure issue computation. Accepts an optional `t` to localize messages.
+ * Falls back to English text when called without `t` (e.g. from non-React code).
+ */
+export function computeValidationIssues(
+  config: TemplateConfig,
+  t?: Dictionary
+): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
   const bankNames = new Set(config.assetBanks.map((b) => b.name));
+
+  const labels = t?.templateValidation ?? {
+    title: "Validation",
+    formatHasSlides:
+      'Format "{label}" has {n} slides (Meta carousel max is 10)',
+    carouselNonSquare:
+      '"{label}" is a carousel with a non-square aspect ratio ({w}×{h}) — Meta may crop it in some placements.',
+    editableNoBank: '"{name}" ({slide}) is editable but has no linked bank',
+    bankMissing: '"{name}" ({slide}) links to non-existent bank "{bank}"',
+    imageNoSource: '"{name}" ({slide}) is an image layer with no source',
+    bankEmpty: 'Bank "{name}" has no items',
+    slideFallback: "Slide {n}",
+  };
 
   for (const format of config.formats) {
     if (format.slides.length > 10) {
       issues.push({
         level: "error",
-        message: `Format "${format.label}" has ${format.slides.length} slides (Meta carousel max is 10)`,
+        message: fmt(labels.formatHasSlides, {
+          label: format.label,
+          n: format.slides.length,
+        }),
       });
     }
     // Meta carousels work best with square creatives. Non-square carousels
@@ -24,33 +55,48 @@ export function computeValidationIssues(config: TemplateConfig): ValidationIssue
     if (format.slides.length > 1 && format.width !== format.height) {
       issues.push({
         level: "info",
-        message: `"${format.label}" is a carousel with a non-square aspect ratio (${format.width}×${format.height}) — Meta may crop it in some placements.`,
+        message: fmt(labels.carouselNonSquare, {
+          label: format.label,
+          w: format.width,
+          h: format.height,
+        }),
       });
     }
     for (let si = 0; si < format.slides.length; si++) {
       const slide = format.slides[si];
-      const slideLabel = slide.label ?? `Slide ${si + 1}`;
+      const slideLabel =
+        slide.label ?? fmt(labels.slideFallback, { n: si + 1 });
       for (const layer of slide.layers) {
         // Image layers with no bank can't be edited — they need a bank to swap from.
         // Text layers without a bank are valid: free-form franchisee input.
         if (layer.editable && !layer.linkedBank && layer.type !== "text") {
           issues.push({
             level: "warning",
-            message: `"${layer.name}" (${slideLabel}) is editable but has no linked bank`,
+            message: fmt(labels.editableNoBank, {
+              name: layer.name,
+              slide: slideLabel,
+            }),
           });
         }
 
         if (layer.linkedBank && !bankNames.has(layer.linkedBank)) {
           issues.push({
             level: "error",
-            message: `"${layer.name}" (${slideLabel}) links to non-existent bank "${layer.linkedBank}"`,
+            message: fmt(labels.bankMissing, {
+              name: layer.name,
+              slide: slideLabel,
+              bank: layer.linkedBank,
+            }),
           });
         }
 
         if (layer.type === "image" && !layer.src && !layer.editable) {
           issues.push({
             level: "info",
-            message: `"${layer.name}" (${slideLabel}) is an image layer with no source`,
+            message: fmt(labels.imageNoSource, {
+              name: layer.name,
+              slide: slideLabel,
+            }),
           });
         }
       }
@@ -61,7 +107,7 @@ export function computeValidationIssues(config: TemplateConfig): ValidationIssue
     if (bank.items.length === 0) {
       issues.push({
         level: "warning",
-        message: `Bank "${bank.name}" has no items`,
+        message: fmt(labels.bankEmpty, { name: bank.name }),
       });
     }
   }
@@ -90,7 +136,8 @@ const bgColors = {
 };
 
 export function TemplateValidation({ config }: TemplateValidationProps) {
-  const issues = computeValidationIssues(config);
+  const t = useT();
+  const issues = computeValidationIssues(config, t);
 
   if (issues.length === 0) return null;
 
@@ -104,7 +151,7 @@ export function TemplateValidation({ config }: TemplateValidationProps) {
   return (
     <div className="space-y-1.5">
       <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Validation
+        {t.templateValidation.title}
       </h4>
       {grouped.map((issue, i) => (
         <div

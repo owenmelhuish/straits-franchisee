@@ -7,6 +7,7 @@ import { SpendTrendChart } from "./spend-trend-chart";
 import { PerformanceTrendChart } from "./performance-trend-chart";
 import { AdsTable } from "./ads-table";
 import type { AnalyticsResponse } from "@/types/analytics";
+import { useT } from "@/lib/i18n/client";
 
 function defaultDateFrom() {
   const d = new Date();
@@ -19,6 +20,7 @@ function defaultDateTo() {
 }
 
 export function AnalyticsDashboard() {
+  const t = useT();
   const [dateFrom, setDateFrom] = useState(defaultDateFrom);
   const [dateTo, setDateTo] = useState(defaultDateTo);
   const [data, setData] = useState<AnalyticsResponse | null>(null);
@@ -57,18 +59,17 @@ export function AnalyticsDashboard() {
   if (needsReauth) {
     return (
       <div className="mx-auto max-w-3xl">
-        <h1 className="mb-6 text-2xl font-bold">Analytics</h1>
+        <h1 className="mb-6 text-2xl font-bold">{t.analytics.title}</h1>
         <div className="rounded-xl border bg-white p-12 text-center">
-          <p className="text-lg font-medium">Reconnect your Meta account</p>
+          <p className="text-lg font-medium">{t.analytics.reconnectTitle}</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Your Meta connection has expired or is missing the required
-            permissions. Please reconnect in Settings to enable analytics.
+            {t.analytics.reconnectDesc}
           </p>
           <a
             href="/dashboard/settings"
             className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
           >
-            Go to Settings
+            {t.analytics.goToSettings}
           </a>
         </div>
       </div>
@@ -78,7 +79,7 @@ export function AnalyticsDashboard() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Analytics</h1>
+        <h1 className="text-2xl font-bold">{t.analytics.title}</h1>
         <DateRangePicker
           dateFrom={dateFrom}
           dateTo={dateTo}
@@ -91,27 +92,27 @@ export function AnalyticsDashboard() {
 
       {loading ? (
         <div className="flex h-64 items-center justify-center text-muted-foreground">
-          Loading analytics...
+          {t.analytics.loading}
         </div>
       ) : data ? (
         <>
           {/* Metric cards */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <MetricCard
-              label="Total Spend"
+              label={t.analytics.totalSpend}
               value={`$${data.summary.totalSpend.toFixed(2)}`}
             />
             <MetricCard
-              label="Impressions"
+              label={t.analytics.impressions}
               value={data.summary.totalImpressions}
             />
-            <MetricCard label="Reach" value={data.summary.totalReach} />
-            <MetricCard label="Clicks" value={data.summary.totalClicks} />
+            <MetricCard label={t.analytics.reach} value={data.summary.totalReach} />
+            <MetricCard label={t.analytics.clicks} value={data.summary.totalClicks} />
             <MetricCard
-              label="Avg CPM"
+              label={t.analytics.avgCpm}
               value={`$${data.summary.avgCpm.toFixed(2)}`}
             />
-            <MetricCard label="Ads Live" value={data.summary.adsLive} />
+            <MetricCard label={t.analytics.adsLive} value={data.summary.adsLive} />
           </div>
 
           {/* Charts */}
@@ -120,13 +121,13 @@ export function AnalyticsDashboard() {
 
           {/* Ads table */}
           <div>
-            <h2 className="mb-3 text-lg font-semibold">Ad Performance</h2>
+            <h2 className="mb-3 text-lg font-semibold">{t.analytics.adPerformance}</h2>
             <AdsTable ads={data.ads} />
           </div>
         </>
       ) : (
         <div className="rounded-xl border bg-white p-12 text-center text-muted-foreground">
-          No analytics data available.
+          {t.analytics.empty}
         </div>
       )}
     </div>

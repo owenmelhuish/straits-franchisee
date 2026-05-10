@@ -7,12 +7,14 @@ import {
   selectActiveFormat,
   selectAllSlidesReady,
 } from "@/stores/builder-store";
+import { useT } from "@/lib/i18n/client";
 
 interface ExportButtonProps {
   onExport: () => void;
 }
 
 export function ExportButton({ onExport }: ExportButtonProps) {
+  const t = useT();
   const isExporting = useBuilderStore((s) => s.isExporting);
   const allSlidesReady = useBuilderStore(selectAllSlidesReady);
   const format = useBuilderStore(selectActiveFormat);
@@ -25,7 +27,9 @@ export function ExportButton({ onExport }: ExportButtonProps) {
       size="lg"
     >
       <Download className="mr-2 h-4 w-4" />
-      {isExporting ? "Exporting..." : `Export PNG${format ? ` (${format.width}×${format.height})` : ""}`}
+      {isExporting
+        ? t.builder.exporting
+        : `${t.builder.exportPng}${format ? ` (${format.width}×${format.height})` : ""}`}
     </Button>
   );
 }

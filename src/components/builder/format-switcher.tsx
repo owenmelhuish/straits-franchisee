@@ -2,8 +2,10 @@
 
 import { useBuilderStore } from "@/stores/builder-store";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useT } from "@/lib/i18n/client";
 
 export function FormatSwitcher() {
+  const t = useT();
   const template = useBuilderStore((s) => s.template);
   const activeFormatIndex = useBuilderStore((s) => s.activeFormatIndex);
   const setActiveFormat = useBuilderStore((s) => s.setActiveFormat);
@@ -13,7 +15,7 @@ export function FormatSwitcher() {
   return (
     <div>
       <p className="mb-2 text-[11px] font-medium text-[#A5A5A5] uppercase tracking-wider">
-        Format
+        {t.builder.format}
       </p>
       <Tabs
         value={String(activeFormatIndex)}

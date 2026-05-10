@@ -20,12 +20,14 @@ import { toast } from "sonner";
 import { TemplateConfig } from "@/types/template";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes-warning";
 import { ChevronLeft, Download } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 interface BuilderViewProps {
   template: TemplateConfig;
 }
 
 export function BuilderView({ template }: BuilderViewProps) {
+  const t = useT();
   const setTemplate = useBuilderStore((s) => s.setTemplate);
   const format = useBuilderStore(selectActiveFormat);
   const activeSlide = useBuilderStore(selectActiveSlide);
@@ -106,32 +108,31 @@ export function BuilderView({ template }: BuilderViewProps) {
           });
           toast.success(
             result.metaAdId
-              ? "Published to Meta Ads!"
-              : "Campaign published successfully!",
+              ? t.builder.publishedToMeta
+              : t.builder.campaignPublished,
             {
               description: result.metaAdId
-                ? "Your ad has been created in PAUSED status. Review it in Meta Ads Manager."
-                : "Your creative has been exported and saved.",
+                ? t.builder.publishedMetaDesc
+                : t.builder.publishedSavedDesc,
             }
           );
         } catch (err) {
           console.error("Failed to save to storage:", err);
-          toast.error("Failed to save campaign", {
-            description:
-              "Your creative was downloaded but could not be saved to the server.",
+          toast.error(t.builder.saveCampaignFailed, {
+            description: t.builder.saveCampaignFailedDesc,
           });
         } finally {
           setExporting(false);
         }
       } else {
-        toast.success("Creative exported!", {
-          description: "Your PNG has been downloaded.",
+        toast.success(t.builder.creativeExported, {
+          description: t.builder.pngDownloaded,
         });
       }
 
       setShowLaunchModal(false);
     },
-    [exportPng, getBlob, format, template, userId, layerSelections, setExporting]
+    [exportPng, getBlob, format, template, userId, layerSelections, setExporting, t]
   );
 
   const editableLayers = activeSlideLayers
@@ -165,7 +166,7 @@ export function BuilderView({ template }: BuilderViewProps) {
               className="flex items-center gap-1.5 rounded-xl bg-[#1A1A1A] px-4 py-1.5 text-[13px] font-medium text-white transition-colors hover:bg-[#333333]"
             >
               <Download className="h-3.5 w-3.5" />
-              Export
+              {t.builder.export}
             </button>
           </div>
         }
@@ -176,7 +177,7 @@ export function BuilderView({ template }: BuilderViewProps) {
               className="mb-4 flex items-center gap-1 text-[13px] text-[#A5A5A5] transition-colors hover:text-[#1A1A1A]"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
-              Back
+              {t.builder.back}
             </Link>
             <div className="mb-1">
               <h2 className="text-[16px] font-semibold text-[#1A1A1A]">

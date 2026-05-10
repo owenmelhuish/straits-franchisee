@@ -4,15 +4,10 @@ import { useState } from "react";
 import { useMapperStore } from "@/stores/mapper-store";
 import { TemplateLayer, AssetBankItem } from "@/types/template";
 import { Eye, EyeOff, Trash2, Plus, Type, ChevronDown } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 const FONT_OPTIONS = ["Arial", "Helvetica", "Georgia", "Times New Roman", "Courier New", "Verdana", "Impact", "Bebas Neue"];
-const WEIGHT_OPTIONS = [
-  { label: "Light", value: "300" },
-  { label: "Normal", value: "normal" },
-  { label: "Semi-Bold", value: "600" },
-  { label: "Bold", value: "bold" },
-  { label: "Extra Bold", value: "800" },
-];
+const WEIGHT_OPTION_VALUES = ["300", "normal", "600", "bold", "800"] as const;
 
 interface TextBankEditorProps {
   layer: TemplateLayer;
@@ -21,6 +16,19 @@ interface TextBankEditorProps {
 }
 
 export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: TextBankEditorProps) {
+  const t = useT();
+  const weightLabel = (value: string): string => {
+    switch (value) {
+      case "300": return t.mapper.weights.light;
+      case "normal": return t.mapper.weights.normal;
+      case "600": return t.mapper.weights.semiBold;
+      case "bold": return t.mapper.weights.bold;
+      case "800": return t.mapper.weights.extraBold;
+      default: return value;
+    }
+  };
+  const alignLabel = (a: "left" | "center" | "right"): string =>
+    a === "left" ? t.mapper.align.left : a === "center" ? t.mapper.align.center : t.mapper.align.right;
   const {
     assetBanks,
     addBankItem,
@@ -85,9 +93,9 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5]">
-          Text Bank: {bank.name}
+          {t.mapper.textBank}: {bank.name}
         </h4>
-        <span className="text-[11px] text-[#A5A5A5]">{bank.items.length} items</span>
+        <span className="text-[11px] text-[#A5A5A5]">{bank.items.length} {t.mapper.items}</span>
       </div>
 
       {/* Item list */}
@@ -137,7 +145,7 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
                         ? "bg-[#1A1A1A] text-white"
                         : "text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A]"
                     }`}
-                    title={isActive ? "Hide preview" : "Preview on canvas"}
+                    title={isActive ? t.mapper.hidePreview : t.mapper.previewOnCanvas}
                   >
                     {isActive ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                   </button>
@@ -155,7 +163,7 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
                 <div className="border-t border-[#E0E0E0] px-3 py-3 space-y-3">
                   {/* Text content */}
                   <div>
-                    <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">Text</label>
+                    <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">{t.mapper.text}</label>
                     <input
                       type="text"
                       value={item.value}
@@ -167,7 +175,7 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
                   {/* Font + Weight */}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">Font</label>
+                      <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">{t.mapper.font}</label>
                       <div className="relative">
                         <select
                           value={item.fontFamily || layer.fontFamily || "Arial"}
@@ -180,14 +188,14 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">Weight</label>
+                      <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">{t.mapper.weight}</label>
                       <div className="relative">
                         <select
                           value={item.fontWeight || layer.fontWeight || "normal"}
                           onChange={(e) => handleUpdateAndPreview(item.id, { fontWeight: e.target.value })}
                           className="w-full appearance-none rounded-lg border border-[#E0E0E0] bg-white px-2 py-1.5 pr-6 text-[11px] text-[#1A1A1A] focus:border-[#D1D1D1] focus:outline-none"
                         >
-                          {WEIGHT_OPTIONS.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
+                          {WEIGHT_OPTION_VALUES.map((w) => <option key={w} value={w}>{weightLabel(w)}</option>)}
                         </select>
                         <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-[#A5A5A5]" />
                       </div>
@@ -197,7 +205,7 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
                   {/* Size + Color */}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">Size</label>
+                      <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">{t.mapper.fontSize}</label>
                       <input
                         type="number"
                         value={item.fontSize || layer.fontSize || 48}
@@ -208,7 +216,7 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
                       />
                     </div>
                     <div>
-                      <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">Color</label>
+                      <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">{t.mapper.color}</label>
                       <div className="flex items-center gap-1.5">
                         <input
                           type="color"
@@ -228,7 +236,7 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
 
                   {/* Alignment */}
                   <div>
-                    <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">Align</label>
+                    <label className="mb-1 block text-[9px] font-medium text-[#A5A5A5]">{t.mapper.textAlign}</label>
                     <div className="flex gap-1">
                       {(["left", "center", "right"] as const).map((align) => (
                         <button
@@ -240,7 +248,7 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
                               : "border-[#E0E0E0] text-[#666] hover:border-[#D1D1D1]"
                           }`}
                         >
-                          {align.charAt(0).toUpperCase() + align.slice(1)}
+                          {alignLabel(align)}
                         </button>
                       ))}
                     </div>
@@ -258,7 +266,7 @@ export function TextBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Tex
           type="text"
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
-          placeholder="Add text variant..."
+          placeholder={t.mapper.addTextVariant}
           onKeyDown={(e) => e.key === "Enter" && handleAddItem()}
           className="flex-1 rounded-xl border border-[#E0E0E0] bg-white px-3 py-2.5 text-[13px] text-[#1A1A1A] placeholder:text-[#A5A5A5] focus:border-[#D1D1D1] focus:outline-none"
         />

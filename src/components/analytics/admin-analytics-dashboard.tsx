@@ -8,6 +8,7 @@ import { PerformanceTrendChart } from "./performance-trend-chart";
 import { AdsTable } from "./ads-table";
 import { FranchiseeSelector } from "./franchisee-selector";
 import type { AdminAnalyticsResponse } from "@/types/analytics";
+import { useT } from "@/lib/i18n/client";
 
 function defaultDateFrom() {
   const d = new Date();
@@ -20,6 +21,7 @@ function defaultDateTo() {
 }
 
 export function AdminAnalyticsDashboard() {
+  const t = useT();
   const [dateFrom, setDateFrom] = useState(defaultDateFrom);
   const [dateTo, setDateTo] = useState(defaultDateTo);
   const [franchiseeId, setFranchiseeId] = useState("all");
@@ -49,7 +51,7 @@ export function AdminAnalyticsDashboard() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold">Analytics</h1>
+        <h1 className="text-2xl font-bold">{t.analytics.title}</h1>
         <div className="flex items-center gap-4">
           {data && data.franchisees.length > 0 && (
             <FranchiseeSelector
@@ -71,35 +73,37 @@ export function AdminAnalyticsDashboard() {
 
       {loading ? (
         <div className="flex h-64 items-center justify-center text-muted-foreground">
-          Loading analytics...
+          {t.analytics.loading}
         </div>
       ) : data ? (
         <>
           {data.staleFranchisees.length > 0 && (
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-              Stale tokens for: {data.staleFranchisees.join(", ")}. These
-              franchisees need to reconnect their Meta accounts.
+              {t.analytics.staleNotice.replace(
+                "{names}",
+                data.staleFranchisees.join(", ")
+              )}
             </div>
           )}
 
           {/* Aggregate metric cards */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-7">
             <MetricCard
-              label="Total Spend"
+              label={t.analytics.totalSpend}
               value={`$${data.summary.totalSpend.toFixed(2)}`}
             />
             <MetricCard
-              label="Impressions"
+              label={t.analytics.impressions}
               value={data.summary.totalImpressions}
             />
-            <MetricCard label="Reach" value={data.summary.totalReach} />
-            <MetricCard label="Clicks" value={data.summary.totalClicks} />
+            <MetricCard label={t.analytics.reach} value={data.summary.totalReach} />
+            <MetricCard label={t.analytics.clicks} value={data.summary.totalClicks} />
             <MetricCard
-              label="Avg CPM"
+              label={t.analytics.avgCpm}
               value={`$${data.summary.avgCpm.toFixed(2)}`}
             />
-            <MetricCard label="Ads Live" value={data.summary.adsLive} />
-            <MetricCard label="Ads Created" value={data.summary.adsCreated} />
+            <MetricCard label={t.analytics.adsLive} value={data.summary.adsLive} />
+            <MetricCard label={t.analytics.adsCreated} value={data.summary.adsCreated} />
           </div>
 
           {/* Charts */}
@@ -110,26 +114,26 @@ export function AdminAnalyticsDashboard() {
           {data.franchisees.length > 0 && (
             <div>
               <h2 className="mb-3 text-lg font-semibold">
-                Franchisee Breakdown
+                {t.analytics.franchiseeBreakdown}
               </h2>
               <div className="overflow-x-auto rounded-xl border bg-white">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-xs text-muted-foreground">
-                      <th className="px-4 py-3 font-medium">Franchisee</th>
+                      <th className="px-4 py-3 font-medium">{t.analytics.franchisee}</th>
                       <th className="px-4 py-3 font-medium text-right">
-                        Spend
+                        {t.analytics.spend}
                       </th>
                       <th className="px-4 py-3 font-medium text-right">
-                        Impressions
+                        {t.analytics.impressions}
                       </th>
                       <th className="px-4 py-3 font-medium text-right">
-                        Reach
+                        {t.analytics.reach}
                       </th>
                       <th className="px-4 py-3 font-medium text-right">
-                        Clicks
+                        {t.analytics.clicks}
                       </th>
-                      <th className="px-4 py-3 font-medium text-right">Ads</th>
+                      <th className="px-4 py-3 font-medium text-right">{t.analytics.ads}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -142,7 +146,7 @@ export function AdminAnalyticsDashboard() {
                           {f.name}
                           {f.stale && (
                             <span className="ml-2 text-xs text-yellow-600">
-                              (stale)
+                              ({t.analytics.stale})
                             </span>
                           )}
                         </td>
@@ -173,7 +177,7 @@ export function AdminAnalyticsDashboard() {
           {data.topAds.length > 0 && (
             <div>
               <h2 className="mb-3 text-lg font-semibold">
-                Top Performing Ads
+                {t.analytics.topAds}
               </h2>
               <AdsTable ads={data.topAds} />
             </div>
@@ -181,7 +185,7 @@ export function AdminAnalyticsDashboard() {
         </>
       ) : (
         <div className="rounded-xl border bg-white p-12 text-center text-muted-foreground">
-          No franchisees have connected Meta accounts yet.
+          {t.analytics.emptyAdmin}
         </div>
       )}
     </div>

@@ -4,6 +4,7 @@ import { useRef, useCallback } from "react";
 import { useMapperStore } from "@/stores/mapper-store";
 import { TemplateLayer, AssetBankItem } from "@/types/template";
 import { Eye, EyeOff, Trash2, Upload, Move, GripVertical } from "lucide-react";
+import { useT } from "@/lib/i18n/client";
 
 interface ImageBankEditorProps {
   layer: TemplateLayer;
@@ -21,6 +22,7 @@ interface ImageBankEditorProps {
  * - Upload new images to the bank
  */
 export function ImageBankEditor({ layer, onPreviewItem, onRevertToOriginal }: ImageBankEditorProps) {
+  const t = useT();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
     assetBanks,
@@ -99,9 +101,9 @@ export function ImageBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Im
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h4 className="text-[11px] font-medium uppercase tracking-wider text-[#A5A5A5]">
-          Image Bank: {bank.name}
+          {t.mapper.imageBank}: {bank.name}
         </h4>
-        <span className="text-[11px] text-[#A5A5A5]">{bank.items.length} items</span>
+        <span className="text-[11px] text-[#A5A5A5]">{bank.items.length} {t.mapper.items}</span>
       </div>
 
       {/* Item list */}
@@ -139,7 +141,7 @@ export function ImageBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Im
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-[13px] font-medium text-[#1A1A1A]">
-                    {item.label || "Untitled"}
+                    {item.label || t.mapper.untitled}
                   </p>
                   <p className="text-[11px] text-[#A5A5A5]">
                     {item.width ?? layer.width} × {item.height ?? layer.height}
@@ -155,14 +157,14 @@ export function ImageBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Im
                         ? "bg-[#1A1A1A] text-white"
                         : "text-[#A5A5A5] hover:bg-[#F4F4F4] hover:text-[#1A1A1A]"
                     }`}
-                    title={isActive ? "Hide preview" : "Preview on canvas"}
+                    title={isActive ? t.mapper.hidePreview : t.mapper.previewOnCanvas}
                   >
                     {isActive ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
                   </button>
                   <button
                     onClick={() => handleDelete(item.id)}
                     className="rounded-lg p-1.5 text-[#A5A5A5] hover:bg-red-50 hover:text-red-500 transition-colors"
-                    title="Remove"
+                    title={t.common.remove}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -173,10 +175,10 @@ export function ImageBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Im
               {isActive && (
                 <div className="border-t border-[#E0E0E0] px-3 py-2">
                   <p className="mb-2 flex items-center gap-1 text-[11px] font-medium text-[#A5A5A5]">
-                    <Move className="h-3 w-3" /> Position &amp; Size
+                    <Move className="h-3 w-3" /> {t.mapper.positionAndSize}
                   </p>
                   <p className="text-[11px] text-[#666]">
-                    Drag and resize directly on the canvas. Position saves automatically.
+                    {t.mapper.positionHint}
                   </p>
                   <div className="mt-2 grid grid-cols-4 gap-1.5">
                     <div>
@@ -241,7 +243,7 @@ export function ImageBankEditor({ layer, onPreviewItem, onRevertToOriginal }: Im
         className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#E0E0E0] bg-white px-3 py-3 text-[13px] text-[#666] transition-all hover:border-[#1A1A1A] hover:text-[#1A1A1A] hover:shadow-[0px_4px_20px_rgba(0,0,0,0.04)]"
       >
         <Upload className="h-4 w-4" />
-        Add image to bank
+        {t.mapper.addImageToBank}
       </button>
       <input
         ref={fileInputRef}

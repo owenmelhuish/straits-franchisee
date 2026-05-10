@@ -4,6 +4,7 @@ import { useEffect, useMemo } from "react";
 import { useCreativeCanvas } from "@/hooks/use-creative-canvas";
 import { TemplateFormat, TemplateSlide } from "@/types/template";
 import { LayerSelections } from "@/types/builder";
+import { useT } from "@/lib/i18n/client";
 
 export interface SlideExportFns {
   exportPng: (filename?: string) => void;
@@ -31,6 +32,7 @@ export function SlideCanvas({
   onReady,
   registerExport,
 }: SlideCanvasProps) {
+  const t = useT();
   // Keep the layers reference stable so the canvas hook doesn't thrash
   const layers = useMemo(() => slide.layers, [slide.layers]);
 
@@ -77,7 +79,7 @@ export function SlideCanvas({
           pointerEvents: "none",
         }}
       >
-        {slide.label ?? `Slide ${index + 1}`}
+        {slide.label ?? t.templateCreator.slideFallback.replace("{n}", String(index + 1))}
       </div>
     </div>
   );
